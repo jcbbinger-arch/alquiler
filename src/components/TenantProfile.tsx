@@ -4,17 +4,18 @@
  */
 
 import React from 'react';
-import { Tenant } from '../types';
-import { User, Phone, ShieldCheck, Calendar, Users, FileText, Plus, Receipt, AlertCircle, CheckCircle2, Zap, Droplets, Wallet, Trash2 } from 'lucide-react';
+import { Payment, CalculatedPayment, Tenant } from '../types';
+import { User, Phone, ShieldCheck, Calendar, Users, FileText, Plus, Receipt, AlertCircle, CheckCircle2, Zap, Droplets, Wallet, Trash2, TrendingUp, DollarSign, Calculator, ChevronRight } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 
 interface TenantProfileProps {
   tenants: Tenant[];
+  payments: CalculatedPayment[];
   onAddTenant: () => void;
   onEditTenant: (tenant: Tenant) => void;
 }
 
-export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProfileProps) {
+export function TenantProfile({ tenants, payments, onAddTenant, onEditTenant }: TenantProfileProps) {
   const [addingChargeTo, setAddingChargeTo] = React.useState<string | null>(null);
   const [newCharge, setNewCharge] = React.useState({ concept: '', amount: 0, category: 'extra' as const });
 
@@ -160,8 +161,82 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                   </div>
                 </div>
               </div>
-              
-              <div className="p-8 space-y-10">
+                
+                {/* Statistics Highlights */}
+                <div className="px-8 pb-8">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {(() => {
+                      const tenantPayments = payments.filter(p => p.tenantId === tenant.id);
+                      const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amountPaid, 0);
+                      const totalRent = tenantPayments.reduce((sum, p) => sum + p.rentAmount, 0);
+                      const totalUtils = tenantPayments.reduce((sum, p) => sum + p.electricityAmount + p.waterAmount, 0);
+                      const yearsActive = [...new Set(tenantPayments.map(p => p.year))].sort((a,b) => b-a);
+                      
+                      return (
+                        <>
+                          <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1">Total Pagado</p>
+                            <p className="text-lg font-black text-indigo-700 font-mono italic">{formatCurrency(totalPaid)}</p>
+                          </div>
+                          <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100/50">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500 mb-1">Beneficio Bruto</p>
+                            <p className="text-lg font-black text-emerald-700 font-mono italic">{formatCurrency(totalRent)}</p>
+                          </div>
+                          <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1">Consumo Suministros</p>
+                            <p className="text-lg font-black text-amber-700 font-mono italic">{formatCurrency(totalUtils)}</p>
+                          </div>
+                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Media Mensual</p>
+                            <p className="text-lg font-black text-slate-700 font-mono italic">
+                              {tenantPayments.length > 0 ? formatCurrency(totalPaid / tenantPayments.length) : '€0,00'}
+                            </p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+
+                <div className="px-8 pb-8 border-t border-slate-100 pt-8">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                    <TrendingUp size={14} className="text-indigo-400" />
+                    Desglose por Años y Periodos
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {(() => {
+                      const tenantPayments = payments.filter(p => p.tenantId === tenant.id);
+                      const years = [...new Set(tenantPayments.map(p => p.year))].sort((a,b) => b-a);
+                      
+                      return years.map(year => {
+                        const yearPayments = tenantPayments.filter(p => p.year === year);
+                        const yearlyPaid = yearPayments.reduce((sum, p) => sum + p.amountPaid, 0);
+                        return (
+                          <div key={year} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group/year hover:border-indigo-100 transition-all">
+                            <div>
+                              <p className="text-sm font-black text-slate-900">AÑO {year}</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{yearPayments.length} meses registrados</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-black text-indigo-600 font-mono">{formatCurrency(yearlyPaid)}</p>
+                              <div className="flex items-center gap-1 justify-end opacity-0 group-hover/year:opacity-100 transition-opacity">
+                                <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">Ver Detalles</span>
+                                <ChevronRight size={10} className="text-indigo-400" />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                    {payments.filter(p => p.tenantId === tenant.id).length === 0 && (
+                      <div className="col-span-full py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-dashed border-slate-200 rounded-2xl">
+                        Sin actividad de pagos registrada todavía
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+              <div className="p-8 space-y-10 border-t border-slate-100">
                 {/* Emergency Contacts */}
                 <div>
                   <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">

@@ -614,6 +614,7 @@ export default function App() {
               >
                 <TenantProfile 
                   tenants={tenants} 
+                  payments={calculatedPayments}
                   onAddTenant={() => {
                     setEditingTenant(undefined);
                     setShowTenantModal(true);
