@@ -288,6 +288,29 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
             </div>
           </div>
 
+          {/* Summary Section */}
+          <div className="bg-slate-900 rounded-[2rem] p-6 lg:p-8 text-white flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex gap-8">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Alquiler Base</p>
+                <p className="text-xl font-mono font-bold line-through opacity-30 decoration-2">{formData.rentAmount.toFixed(2)} €</p>
+              </div>
+              <div className="text-rose-400">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400/60 mb-1">Total Gastos</p>
+                <p className="text-xl font-mono font-bold">
+                  +{(formData.electricityAmount + formData.waterAmount + formData.otherExpenses).toFixed(2)} €
+                </p>
+              </div>
+            </div>
+
+            <div className="text-right">
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-2">Total Neto a Cobrar</p>
+              <p className="text-4xl font-black font-mono">
+                {(formData.rentAmount + formData.electricityAmount + formData.waterAmount + formData.otherExpenses).toFixed(2)} <span className="text-lg opacity-50 font-sans tracking-normal">€</span>
+              </p>
+            </div>
+          </div>
+
           <div className="pt-8 border-t border-slate-100 flex gap-4">
              <button 
               type="button"

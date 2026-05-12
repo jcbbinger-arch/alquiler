@@ -48,17 +48,17 @@ export function PaymentTable({ payments, onEdit, onViewReceipt, onDelete }: Paym
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex flex-col items-end">
-                    <span className="font-mono text-sm text-slate-900 font-bold">{formatCurrency(payment.totalToPay)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total:</span>
+                      <span className="font-mono text-sm text-slate-900 font-bold">{formatCurrency(payment.totalToPay)}</span>
+                    </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-black text-slate-500 uppercase tracking-tighter">R:{payment.rentAmount}</span>
-                      {payment.electricityAmount > 0 && (
-                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 border border-amber-100 rounded text-[9px] font-black text-amber-600">
-                          <Zap size={8} /> {payment.electricityAmount}
-                        </div>
-                      )}
-                      {payment.waterAmount > 0 && (
-                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded text-[9px] font-black text-blue-600">
-                          <Droplets size={8} /> {payment.waterAmount}
+                      <span className="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-black text-slate-500 uppercase tracking-tighter" title="Alquiler Base">R:{payment.rentAmount}</span>
+                      
+                      {(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0)) > 0 && (
+                        <div className="px-1.5 py-0.5 bg-rose-50 border border-rose-100 rounded text-[9px] font-black text-rose-600 flex items-center gap-1" title="Suma de Gastos (Luz + Agua + Otros)">
+                          <span>GASTOS:</span>
+                          <span>{formatCurrency(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0))}</span>
                         </div>
                       )}
                     </div>
@@ -73,9 +73,16 @@ export function PaymentTable({ payments, onEdit, onViewReceipt, onDelete }: Paym
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <span className="font-bold font-mono text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">
-                    {formatCurrency(Math.max(0, payment.netDue))}
-                  </span>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="font-bold font-mono text-slate-900 bg-slate-100 px-2 py-1 rounded-lg">
+                      {formatCurrency(Math.max(0, payment.netDue))}
+                    </span>
+                    {(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0)) > 0 && (
+                      <span className="text-[11px] font-black text-rose-600 uppercase tracking-tighter">
+                         Incl. {formatCurrency(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0))} gastos
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex flex-col items-end">
