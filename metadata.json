@@ -1,0 +1,6 @@
+{
+  "name": "RentaControl - Alquiler",
+  "description": "App de contabilidad para gestión de alquileres, seguimiento de suministros (luz/agua) y balance de ganancias.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
