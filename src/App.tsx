@@ -173,14 +173,20 @@ export default function App() {
 
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
-      // totalToPay for THIS MONTH only includes what is NOT postponed
-      const totalToPay = p.rentAmount + 
+      // totalToPay for THIS MONTH only includes what is NOT postponed, for invoice purposes
+      const totalInvoicedThisMonth = p.rentAmount + 
                          (p.includeElectricity !== false ? p.electricityAmount : 0) + 
                          (p.includeWater !== false ? p.waterAmount : 0) + 
                          p.otherExpenses + (p.manualChargesAmount || 0);
       
+      // Total charges incurred THIS MONTH (postponed + included) for debt accumulation
+      const totalIncurredThisMonth = p.rentAmount + 
+                                     p.electricityAmount + 
+                                     p.waterAmount + 
+                                     p.otherExpenses + (p.manualChargesAmount || 0);
+
       // newDebt is previous debt (or surplus, if cumulativeDebt < 0) + current charges
-      const totalDue = totalToPay + cumulativeDebt;
+      const totalDue = totalIncurredThisMonth + cumulativeDebt;
       
       // Net amount I must pay now to clear everything up to this month
       const netDue = Math.max(0, totalDue); 
@@ -205,8 +211,8 @@ export default function App() {
       
       historicalResult.push({
         ...p,
-        totalToPay,
-        previousBalance: cumulativeDebt < 0 ? -cumulativeDebt : 0, // This logic needs to map surplus for UI if needed
+        totalToPay: totalInvoicedThisMonth,
+        previousBalance: cumulativeDebt < 0 ? -cumulativeDebt : 0, 
         netDue,
         currentSurplus: cumulativeDebt < 0 ? -cumulativeDebt : 0,
         pendingDebts
