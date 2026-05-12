@@ -168,7 +168,7 @@ export default function App() {
       return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month);
     });
 
-    let cumulativeSurplus = 0;
+    let cumulativeDebt = 0; // This will hold the positive debt, or negative surplus
     const historicalResult: CalculatedPayment[] = [];
 
     for (let i = 0; i < sorted.length; i++) {
@@ -179,53 +179,38 @@ export default function App() {
                          (p.includeWater !== false ? p.waterAmount : 0) + 
                          p.otherExpenses + (p.manualChargesAmount || 0);
       
+      // newDebt is previous debt (or surplus, if cumulativeDebt < 0) + current charges
+      const totalDue = totalToPay + cumulativeDebt;
+      
+      // Net amount I must pay now to clear everything up to this month
+      const netDue = Math.max(0, totalDue); 
+      
+      // How much I paid
+      const amountPaid = p.amountPaid;
+      
+      // Calculate remaining debt or surplus for next month
+      // If I paid more than totalDue, I have surplus (negative debt)
+      // If I paid less than totalDue, I have remaining debt (positive debt)
+      cumulativeDebt = totalDue - amountPaid;
+      
+      // Pending debts for UI purposes
       const pendingDebts: DebtDetail[] = [];
-      
-      // Add any real debt from history
-      historicalResult.forEach(prevCalc => {
-          const deficit = prevCalc.netDue - prevCalc.amountPaid;
-          if (deficit > 0) {
-              pendingDebts.push({
-                  concept: 'Saldo pendiente',
-                  period: `${prevCalc.month} ${prevCalc.year}`,
-                  amount: deficit
-              });
-          }
-          // ADDITION: Also add postponed utilities from previous months as pending debts
-          if (prevCalc.includeElectricity === false && prevCalc.electricityAmount > 0) {
-            pendingDebts.push({
-              concept: 'Luz pospuesta',
-              period: `${prevCalc.month} ${prevCalc.year}`,
-              amount: prevCalc.electricityAmount
-            });
-          }
-          if (prevCalc.includeWater === false && prevCalc.waterAmount > 0) {
-            pendingDebts.push({
-              concept: 'Agua pospuesta',
-              period: `${prevCalc.month} ${prevCalc.year}`,
-              amount: prevCalc.waterAmount
-            });
-          }
-      });
-
-      const previousBalance = cumulativeSurplus;
-      const totalPendingHistory = pendingDebts.reduce((acc, d) => acc + d.amount, 0);
-      
-      const netDue = totalToPay + totalPendingHistory - previousBalance;
-      
-      // Surplus is what's left after covering netDue
-      const currentSurplus = Math.max(0, p.amountPaid - Math.max(0, netDue));
+      if (cumulativeDebt > 0) {
+        pendingDebts.push({
+          concept: 'Saldo pendiente acumulado',
+          period: 'Anterior',
+          amount: cumulativeDebt
+        });
+      }
       
       historicalResult.push({
         ...p,
         totalToPay,
-        previousBalance,
+        previousBalance: cumulativeDebt < 0 ? -cumulativeDebt : 0, // This logic needs to map surplus for UI if needed
         netDue,
-        currentSurplus,
+        currentSurplus: cumulativeDebt < 0 ? -cumulativeDebt : 0,
         pendingDebts
       });
-
-      cumulativeSurplus = currentSurplus;
     }
 
     return historicalResult.reverse(); // Show latest first in UI
