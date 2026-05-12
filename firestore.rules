@@ -25,15 +25,17 @@ service cloud.firestore {
 
     // Phase 4: Entity Validation Helpers
     function isValidTenant(data) {
-      return data.keys().hasAll(['id', 'name', 'leaseStartDate', 'ownerId']) 
+      return data.keys().hasAll(['id', 'name', 'leaseStartDate', 'ownerId', 'updatedAt']) 
           && data.ownerId == request.auth.uid
+          && data.updatedAt == request.time
           && data.name is string && data.name.size() > 0 && data.name.size() <= 100
           && data.id is string && data.id.size() <= 64;
     }
 
     function isValidPayment(data) {
-      return data.keys().hasAll(['id', 'tenantId', 'year', 'month', 'rentAmount', 'ownerId'])
+      return data.keys().hasAll(['id', 'tenantId', 'year', 'month', 'rentAmount', 'ownerId', 'updatedAt'])
           && data.ownerId == request.auth.uid
+          && data.updatedAt == request.time
           && data.tenantId is string && data.tenantId.size() <= 64
           && data.month is string && data.month.size() > 0
           && data.year is number

@@ -51,6 +51,16 @@ export interface DepositPayment {
   notes?: string;
 }
 
+export interface ManualCharge {
+  id: string;
+  date: string;
+  concept: string;
+  amount: number;
+  isPaid: boolean;
+  paymentDate?: string;
+  category: 'rotura' | 'atraso' | 'extra' | 'servicio';
+}
+
 export interface Tenant {
   id: string;
   name: string;
@@ -63,8 +73,10 @@ export interface Tenant {
   leaseStartDate: string;
   leaseEndDate?: string;
   emergencyContacts: EmergencyContact[];
+  manualCharges?: ManualCharge[];
   notes?: TenantNote[];
   ownerId?: string;
+  updatedAt?: any;
 }
 
 export interface DebtDetail {

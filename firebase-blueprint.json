@@ -37,6 +37,21 @@
             }
           }
         },
+        "manualCharges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "concept": { "type": "string" },
+              "amount": { "type": "number" },
+              "isPaid": { "type": "boolean" },
+              "paymentDate": { "type": "string", "format": "date" },
+              "category": { "type": "string", "enum": ["rotura", "atraso", "extra", "servicio"] }
+            }
+          }
+        },
         "notes": {
           "type": "array",
           "items": {
@@ -49,7 +64,8 @@
             }
           }
         },
-        "ownerId": { "type": "string" }
+        "ownerId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "name", "leaseStartDate", "ownerId"]
     },
@@ -78,7 +94,8 @@
         "paymentDate": { "type": "string", "format": "date" },
         "isPaid": { "type": "boolean" },
         "notes": { "type": "string" },
-        "ownerId": { "type": "string" }
+        "ownerId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "tenantId", "year", "month", "rentAmount", "ownerId"]
     }

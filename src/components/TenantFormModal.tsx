@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Tenant, EmergencyContact, TenantNote } from '../types';
-import { X, Save, Calendar, Plus, Trash2, MessageSquare, ShieldCheck } from 'lucide-react';
+import { Tenant, EmergencyContact, TenantNote, ManualCharge } from '../types';
+import { X, Save, Calendar, Plus, Trash2, MessageSquare, ShieldCheck, Wallet, Receipt, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
+import { cn } from '../lib/utils';
 
 interface TenantFormModalProps {
   tenant?: Tenant;
@@ -17,6 +18,7 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
         ...tenant,
         emergencyContacts: tenant.emergencyContacts || (t.emergencyContact ? [t.emergencyContact] : [{ name: '', relationship: '', phone: '' }]),
         notes: tenant.notes || [],
+        manualCharges: tenant.manualCharges || [],
         depositMonths: tenant.depositMonths || 1,
         depositInitialDate: tenant.depositInitialDate || tenant.leaseStartDate,
         additionalDeposits: tenant.additionalDeposits || []
@@ -34,6 +36,7 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
       leaseStartDate: new Date().toISOString().split('T')[0],
       leaseEndDate: '',
       emergencyContacts: [{ name: '', relationship: '', phone: '' }],
+      manualCharges: [],
       notes: []
     };
   });
@@ -87,6 +90,32 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
     setFormData(prev => ({
       ...prev,
       notes: (prev.notes || []).filter(n => n.id !== id)
+    }));
+  };
+  
+  const addManualCharge = () => {
+    const newCharge: ManualCharge = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: new Date().toISOString().split('T')[0],
+      concept: '',
+      amount: 0,
+      isPaid: false,
+      category: 'extra'
+    };
+    setFormData(prev => ({ ...prev, manualCharges: [newCharge, ...(prev.manualCharges || [])] }));
+  };
+
+  const updateManualCharge = (id: string, field: keyof ManualCharge, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      manualCharges: (prev.manualCharges || []).map(c => c.id === id ? { ...c, [field]: value } : c)
+    }));
+  };
+
+  const removeManualCharge = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      manualCharges: (prev.manualCharges || []).filter(c => c.id !== id)
     }));
   };
 
@@ -383,6 +412,100 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Section: Manual Charges / Extras */}
+          <div className="space-y-8">
+            <div className="flex justify-between items-center">
+              <h4 className="text-xs font-black text-rose-600 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-8 h-px bg-rose-600" />
+                Cargos Manuales / Gastos Pendientes
+              </h4>
+              <button 
+                type="button" 
+                onClick={addManualCharge}
+                className="flex items-center gap-2 text-xs font-black text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all"
+              >
+                <Plus size={16} />
+                Nuevo Cargo
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {formData.manualCharges?.map((charge) => (
+                <div key={charge.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 p-5 bg-white border border-slate-100 rounded-3xl shadow-sm relative group hover:border-rose-100 transition-colors">
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Fecha</label>
+                    <input 
+                      type="date" 
+                      value={charge.date}
+                      onChange={(e) => updateManualCharge(charge.id, 'date', e.target.value)}
+                      className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-xs font-bold outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-1 space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Tipo</label>
+                    <select 
+                      value={charge.category}
+                      onChange={(e) => updateManualCharge(charge.id, 'category', e.target.value)}
+                      className="w-full bg-slate-50 border-none rounded-xl px-2 py-2 text-[10px] font-black uppercase outline-none"
+                    >
+                      <option value="rotura">Rotura</option>
+                      <option value="atraso">Atraso</option>
+                      <option value="extra">Extra</option>
+                      <option value="servicio">Servicio</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-5 space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Concepto / Descripción</label>
+                    <input 
+                      type="text" 
+                      value={charge.concept}
+                      placeholder="Ej. Reparación grifo cocina..."
+                      onChange={(e) => updateManualCharge(charge.id, 'concept', e.target.value)}
+                      className="w-full bg-slate-50 border-none rounded-xl px-4 py-2 text-xs font-medium outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase">Importe (€)</label>
+                    <input 
+                      type="number" 
+                      value={charge.amount}
+                      onChange={(e) => updateManualCharge(charge.id, 'amount', parseFloat(e.target.value) || 0)}
+                      className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-xs font-black text-rose-600 outline-none"
+                    />
+                  </div>
+                  <div className="md:col-span-1 flex items-end justify-center pb-1">
+                    <button 
+                      type="button" 
+                      onClick={() => updateManualCharge(charge.id, 'isPaid', !charge.isPaid)}
+                      className={cn(
+                        "p-2 rounded-xl transition-all",
+                        charge.isPaid ? "bg-emerald-50 text-emerald-600" : "bg-slate-50 text-slate-400"
+                      )}
+                      title={charge.isPaid ? "Pagado" : "Pendiente"}
+                    >
+                      {charge.isPaid ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                    </button>
+                  </div>
+                  <div className="md:col-span-1 flex items-end justify-center pb-1">
+                    <button 
+                      type="button" 
+                      onClick={() => removeManualCharge(charge.id)}
+                      className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {(!formData.manualCharges || formData.manualCharges.length === 0) && (
+                <div className="text-center py-8 bg-slate-50/50 border border-dashed border-slate-200 rounded-[2rem]">
+                  <Receipt size={24} className="mx-auto text-slate-300 mb-2" />
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Sin cargos manuales pendientes</p>
+                </div>
+              )}
             </div>
           </div>
 

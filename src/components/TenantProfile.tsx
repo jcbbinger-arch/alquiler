@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Tenant } from '../types';
-import { User, Phone, ShieldCheck, Calendar, Users, FileText, Plus } from 'lucide-react';
+import { User, Phone, ShieldCheck, Calendar, Users, FileText, Plus, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 
 interface TenantProfileProps {
@@ -15,6 +15,12 @@ interface TenantProfileProps {
 }
 
 export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProfileProps) {
+  const getPendingManualChargesTotal = (tenant: Tenant) => {
+    return (tenant.manualCharges || [])
+      .filter(c => !c.isPaid)
+      .reduce((sum, c) => sum + c.amount, 0);
+  };
+
   return (
     <div className="space-y-10">
       <div className="flex items-center justify-between">
@@ -129,6 +135,64 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                         <p className="font-bold text-slate-800 font-mono text-sm">{contact.phone}</p>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Manual Charges / Internal Ledger */}
+                <div>
+                  <div className="flex justify-between items-center mb-6">
+                    <h4 className="text-sm font-black text-rose-600 uppercase tracking-widest flex items-center gap-2">
+                      <Receipt size={18} />
+                      Cargos Manuales y Gastos Extra
+                    </h4>
+                    {getPendingManualChargesTotal(tenant) > 0 && (
+                      <div className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg border border-rose-100 flex items-center gap-2">
+                        <AlertCircle size={14} />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Pendiente: {formatCurrency(getPendingManualChargesTotal(tenant))}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-1 gap-3">
+                    {tenant.manualCharges && tenant.manualCharges.length > 0 ? (
+                      tenant.manualCharges.map((charge) => (
+                        <div key={charge.id} className={cn(
+                          "flex items-center justify-between p-4 rounded-2xl border transition-all",
+                          charge.isPaid 
+                            ? "bg-slate-50/50 border-slate-100 text-slate-400" 
+                            : "bg-white border-rose-100 shadow-sm shadow-rose-50"
+                        )}>
+                          <div className="flex items-center gap-4">
+                            <div className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center",
+                              charge.isPaid ? "bg-slate-100" : "bg-rose-100 text-rose-600"
+                            )}>
+                              {charge.isPaid ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                            </div>
+                            <div>
+                              <p className={cn("text-xs font-bold", charge.isPaid ? "text-slate-400" : "text-slate-800")}>
+                                {charge.concept}
+                              </p>
+                              <p className="text-[10px] uppercase font-black tracking-widest opacity-50">
+                                {new Date(charge.date).toLocaleDateString('es-ES')} • {charge.category}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={cn("text-sm font-black", charge.isPaid ? "text-slate-400" : "text-rose-600")}>
+                              {formatCurrency(charge.amount)}
+                            </p>
+                            <p className="text-[8px] font-black uppercase tracking-widest opacity-50">
+                              {charge.isPaid ? 'Pagado' : 'Pendiente'}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No hay cargos registrados</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
