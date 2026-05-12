@@ -111,9 +111,8 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                     return acc;
                   }, {} as Record<string, typeof payment.pendingDebts>);
 
-                  // Sort periods chronologically (naive sort: assuming period is "Month Year")
+                  // Sort periods chronologically
                   const sortedPeriods = Object.keys(groupedDebts).sort((a, b) => {
-                    // Simple chronological sort for "Month Year" format
                     const [m1, y1] = a.split(' ');
                     const [m2, y2] = b.split(' ');
                     const date1 = new Date(parseInt(y1), MONTHS.indexOf(m1));
@@ -121,10 +120,20 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                     return date1.getTime() - date2.getTime();
                   });
 
+                  // Helper for concept priority
+                  const getConceptPriority = (concept: string) => {
+                    if (concept.includes('Alquiler')) return 1;
+                    if (concept.includes('Luz')) return 2;
+                    if (concept.includes('Agua')) return 3;
+                    return 4;
+                  };
+
                   return sortedPeriods.map(period => (
                     <div key={period} className="space-y-1">
                       <p className="text-[10px] font-bold text-slate-500 uppercase">{period}</p>
-                      {groupedDebts[period].map((debt, idx) => (
+                      {groupedDebts[period]
+                        .sort((a, b) => getConceptPriority(a.concept) - getConceptPriority(b.concept))
+                        .map((debt, idx) => (
                         <div key={idx} className="flex justify-between items-center text-slate-700 text-[11px]">
                           <span>{debt.concept}</span>
                           <span className="font-mono">{formatCurrency(debt.amount)}</span>
