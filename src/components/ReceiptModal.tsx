@@ -104,7 +104,7 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                 <h5 className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Deuda Anterior Acumulada</h5>
                 {payment.pendingDebts.map((debt, idx) => (
                   <div key={idx} className="flex justify-between items-center text-rose-600 text-[11px]">
-                    <span>{debt.period}</span>
+                    <span>{debt.concept} - {debt.period}</span>
                     <span className="font-mono font-bold">{formatCurrency(debt.amount)}</span>
                   </div>
                 ))}
