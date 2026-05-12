@@ -168,61 +168,68 @@ export default function App() {
       return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month);
     });
 
-    let cumulativeDebt = 0; // Total debt owed
-    let pendingDetails: DebtDetail[] = []; // Composition of this debt
-
+    let allPendingDebts: (DebtDetail & { date: Date })[] = [];
     const historicalResult: CalculatedPayment[] = [];
 
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
 
-      // Expenses to include this invoice
-      const rent = p.rentAmount;
-      const elec = p.includeElectricity !== false ? p.electricityAmount : 0;
-      const water = p.includeWater !== false ? p.waterAmount : 0;
-      const other = p.otherExpenses + (p.manualChargesAmount || 0);
+      // 1. Add all incurred charges to debt tracking
+      const charges = [
+        { concept: 'Alquiler', amount: p.rentAmount },
+        { concept: 'Luz', amount: p.electricityAmount },
+        { concept: 'Agua', amount: p.waterAmount },
+        { concept: 'Otros', amount: p.otherExpenses + (p.manualChargesAmount || 0) }
+      ];
 
-      // Invoiced charges
-      const totalInvoicedThisMonth = rent + elec + water + other;
+      charges.forEach(c => {
+        if (c.amount > 0) {
+          allPendingDebts.push({
+            concept: c.concept,
+            period: `${p.month} ${p.year}`,
+            amount: c.amount,
+            month: p.month,
+            year: p.year,
+            date: new Date(p.year, MONTHS.indexOf(p.month))
+          });
+        }
+      });
 
-      // Unbilled/Postponed charges that accumulate to debt
-      const postponedElec = p.includeElectricity === false ? p.electricityAmount : 0;
-      const postponedWater = p.includeWater === false ? p.waterAmount : 0;
-      
-      // Expenses incurred for debt calculation
-      const incurredCharges = rent + p.electricityAmount + p.waterAmount + other;
+      // 2. Pay off oldest debts first using amountPaid
+      let remainingPayment = p.amountPaid;
+      allPendingDebts.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-      // Add new charges to cumulative debt
-      cumulativeDebt += incurredCharges;
-
-      // Deduct payment
-      cumulativeDebt -= p.amountPaid;
-
-      // Update pending details
-      // Simple way: clear previous, rebuild based on current cumulativeDebt
-      // Real requirement: breakdown by month. This is harder.
-      // Let's keep it simple for now: add to pending list
-      if (postponedElec > 0) {
-        pendingDetails.push({ concept: 'Luz pospuesta', period: `${p.month} ${p.year}`, amount: postponedElec });
+      for (let debt of allPendingDebts) {
+        if (remainingPayment <= 0) break;
+        const toPay = Math.min(debt.amount, remainingPayment);
+        debt.amount -= toPay;
+        remainingPayment -= toPay;
       }
-      if (postponedWater > 0) {
-        pendingDetails.push({ concept: 'Agua pospuesta', period: `${p.month} ${p.year}`, amount: postponedWater });
-      }
 
-      // If amountPaid covers charges, remove from pendingDetails (simplified)
-      // This is a naive implementation based on the request's core goal.
-      // A more robust implementation would match payment to specific debts.
-      // Given the complexity of the current app, we'll keep it functional first.
-      
-      const netDue = Math.max(0, cumulativeDebt);
+      // 3. Remove paid debts
+      allPendingDebts = allPendingDebts.filter(d => d.amount > 0);
+
+      // 4. Calculate this month's invoice figures
+      const totalInvoicedThisMonth = p.rentAmount + 
+                         (p.includeElectricity !== false ? p.electricityAmount : 0) + 
+                         (p.includeWater !== false ? p.waterAmount : 0) + 
+                         p.otherExpenses + (p.manualChargesAmount || 0);
+
+      const netDue = allPendingDebts.reduce((sum, d) => sum + d.amount, 0);
 
       historicalResult.push({
         ...p,
         totalToPay: totalInvoicedThisMonth,
-        previousBalance: cumulativeDebt < 0 ? -cumulativeDebt : 0, 
-        netDue,
-        currentSurplus: cumulativeDebt < 0 ? -cumulativeDebt : 0,
-        pendingDebts: [...pendingDetails] // This is likely still too simple
+        previousBalance: remainingPayment > 0 ? remainingPayment : 0, // Surplus if any
+        netDue: netDue,
+        currentSurplus: remainingPayment > 0 ? remainingPayment : 0,
+        pendingDebts: allPendingDebts.map(d => ({ 
+            concept: `${d.concept}${p.includeElectricity === false && d.concept === 'Luz' ? ' (Pospuesto)' : ''}${p.includeWater === false && d.concept === 'Agua' ? ' (Pospuesto)' : ''}`, 
+            period: d.period, 
+            amount: d.amount,
+            month: d.month,
+            year: d.year
+        }))
       });
     }
 

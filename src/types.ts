@@ -89,6 +89,8 @@ export interface DebtDetail {
   concept: string;
   period: string;
   amount: number;
+  month: string;
+  year: number;
 }
 
 export interface CalculatedPayment extends Payment {
