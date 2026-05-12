@@ -168,25 +168,25 @@ export default function App() {
       return MONTHS.indexOf(a.month) - MONTHS.indexOf(b.month);
     });
 
-    let allPendingDebts: (DebtDetail & { date: Date })[] = [];
+    let activeUnpaidItems: (DebtDetail & { date: Date })[] = [];
     const historicalResult: CalculatedPayment[] = [];
 
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
 
-      // 1. Add all incurred charges to debt tracking
-      const charges = [
+      // 1. Add this month's incurred charges to unpaid tracking
+      const monthlyCharges = [
         { concept: 'Alquiler', amount: p.rentAmount },
         { concept: 'Luz', amount: p.electricityAmount, postponed: p.includeElectricity === false },
-        { concept: 'Agua', amount: p.includeWater === false ? 0 : p.waterAmount, postponed: false }, // Rent/Manual charges are base
+        { concept: 'Agua', amount: p.includeWater === false ? 0 : p.waterAmount, postponed: false },
         { concept: 'Agua (Pospuesta)', amount: p.includeWater === false ? p.waterAmount : 0, postponed: true },
         { concept: 'Luz (Pospuesta)', amount: p.includeElectricity === false ? p.electricityAmount : 0, postponed: true },
         { concept: 'Otros', amount: p.otherExpenses + (p.manualChargesAmount || 0), postponed: false }
       ];
 
-      charges.forEach(c => {
+      monthlyCharges.forEach(c => {
         if (c.amount > 0) {
-          allPendingDebts.push({
+          activeUnpaidItems.push({
             concept: c.concept,
             period: `${p.month} ${p.year}`,
             amount: c.amount,
@@ -199,43 +199,35 @@ export default function App() {
 
       // 2. Pay off oldest debts first using amountPaid
       let remainingPayment = p.amountPaid;
-      allPendingDebts.sort((a, b) => a.date.getTime() - b.date.getTime());
+      activeUnpaidItems.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-      for (let debt of allPendingDebts) {
+      for (let debt of activeUnpaidItems) {
         if (remainingPayment <= 0) break;
         const toPay = Math.min(debt.amount, remainingPayment);
         debt.amount -= toPay;
         remainingPayment -= toPay;
       }
 
-      // 3. Remove paid debts
-      allPendingDebts = allPendingDebts.filter(d => d.amount > 0);
+      // 3. Keep unpaid debts
+      activeUnpaidItems = activeUnpaidItems.filter(d => d.amount > 0);
 
-      // 4. Calculate this month's invoice figures
+      // 4. Calculate invoice figures
       const totalInvoicedThisMonth = p.rentAmount + 
                          (p.includeElectricity !== false ? p.electricityAmount : 0) + 
                          (p.includeWater !== false ? p.waterAmount : 0) + 
                          p.otherExpenses + (p.manualChargesAmount || 0);
 
-      const netDue = allPendingDebts.reduce((sum, d) => sum + d.amount, 0);
-
       historicalResult.push({
         ...p,
         totalToPay: totalInvoicedThisMonth,
-        previousBalance: remainingPayment > 0 ? remainingPayment : 0, // Surplus if any
-        netDue: netDue,
+        previousBalance: remainingPayment > 0 ? remainingPayment : 0,
+        netDue: activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0),
         currentSurplus: remainingPayment > 0 ? remainingPayment : 0,
-        pendingDebts: allPendingDebts.map(d => ({ 
-            concept: d.concept, 
-            period: d.period, 
-            amount: d.amount,
-            month: d.month,
-            year: d.year
-        }))
+        pendingDebts: [...activeUnpaidItems]
       });
     }
 
-    return historicalResult.reverse(); // Show latest first in UI
+    return historicalResult.reverse();
   }, [payments]);
 
   // Filtered views

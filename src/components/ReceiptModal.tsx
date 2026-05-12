@@ -1,6 +1,7 @@
 import React from 'react';
 import { CalculatedPayment, Tenant } from '../types';
 import { formatCurrency } from '../lib/utils';
+import { MONTHS } from '../constants';
 import { Printer, X, Download, Zap, Droplets } from 'lucide-react';
 import { motion } from 'motion/react';
 
@@ -100,14 +101,38 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
             </div>
 
             {payment.pendingDebts.length > 0 && (
-              <div className="space-y-1.5 pt-3">
-                <h5 className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Deuda Anterior Acumulada</h5>
-                {payment.pendingDebts.map((debt, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-rose-600 text-[11px]">
-                    <span>{debt.concept} - {debt.period}</span>
-                    <span className="font-mono font-bold">{formatCurrency(debt.amount)}</span>
-                  </div>
-                ))}
+              <div className="space-y-4 pt-4">
+                <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest border-b border-rose-100 pb-1">Deuda Anterior Acumulada</h5>
+                
+                {(() => {
+                  const groupedDebts = payment.pendingDebts.reduce((acc, debt) => {
+                    if (!acc[debt.period]) acc[debt.period] = [];
+                    acc[debt.period].push(debt);
+                    return acc;
+                  }, {} as Record<string, typeof payment.pendingDebts>);
+
+                  // Sort periods chronologically (naive sort: assuming period is "Month Year")
+                  const sortedPeriods = Object.keys(groupedDebts).sort((a, b) => {
+                    // Simple chronological sort for "Month Year" format
+                    const [m1, y1] = a.split(' ');
+                    const [m2, y2] = b.split(' ');
+                    const date1 = new Date(parseInt(y1), MONTHS.indexOf(m1));
+                    const date2 = new Date(parseInt(y2), MONTHS.indexOf(m2));
+                    return date1.getTime() - date2.getTime();
+                  });
+
+                  return sortedPeriods.map(period => (
+                    <div key={period} className="space-y-1">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">{period}</p>
+                      {groupedDebts[period].map((debt, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-slate-700 text-[11px]">
+                          <span>{debt.concept}</span>
+                          <span className="font-mono">{formatCurrency(debt.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ));
+                })()}
               </div>
             )}
 
