@@ -72,11 +72,11 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
             <div className="grid grid-cols-1 gap-2 py-2">
               <div className="flex justify-between items-center text-slate-600 text-xs">
                 <span className="flex items-center gap-2"><Zap size={12} className="text-amber-500" /> Suministro Luz</span>
-                <span className="font-mono">{formatCurrency(payment.electricityAmount)}</span>
+                <span className="font-mono">{payment.includeElectricity !== false ? formatCurrency(payment.electricityAmount) : 'Aplazado'}</span>
               </div>
               <div className="flex justify-between items-center text-slate-600 text-xs">
                 <span className="flex items-center gap-2"><Droplets size={12} className="text-blue-500" /> Suministro Agua</span>
-                <span className="font-mono">{formatCurrency(payment.waterAmount)}</span>
+                <span className="font-mono">{payment.includeWater !== false ? formatCurrency(payment.waterAmount) : 'Aplazado'}</span>
               </div>
             </div>
 
