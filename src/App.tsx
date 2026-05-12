@@ -173,7 +173,7 @@ export default function App() {
 
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
-      const totalToPay = p.rentAmount + p.electricityAmount + p.waterAmount + p.otherExpenses;
+      const totalToPay = p.rentAmount + p.electricityAmount + p.waterAmount + p.otherExpenses + (p.manualChargesAmount || 0);
       
       const pendingDebts: DebtDetail[] = [];
       
@@ -263,6 +263,24 @@ export default function App() {
   const handleSavePayment = async (payment: Payment) => {
     if (!user) return;
     try {
+      // If payment includes manual charges, mark them as paid in the tenant record
+      if (payment.includedChargeIds && payment.includedChargeIds.length > 0) {
+        const tenant = tenants.find(t => t.id === payment.tenantId);
+        if (tenant) {
+          const updatedCharges = (tenant.manualCharges || []).map(charge => {
+            if (payment.includedChargeIds?.includes(charge.id)) {
+              return { ...charge, isPaid: true, paymentDate: payment.paymentDate };
+            }
+            return charge;
+          });
+          
+          await handleSaveTenant({
+            ...tenant,
+            manualCharges: updatedCharges
+          });
+        }
+      }
+
       // Deep clone and clean undefined values
       const cleanPayment = JSON.parse(JSON.stringify(payment));
       const docRef = doc(db, 'payments', payment.id);
@@ -617,6 +635,7 @@ export default function App() {
       {(showAddModal || editingPayment) && (
         <PaymentFormModal 
           payment={editingPayment}
+          tenants={tenants}
           onClose={() => {
             setShowAddModal(false);
             setEditingPayment(undefined);

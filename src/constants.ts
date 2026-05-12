@@ -6,6 +6,7 @@ export const INITIAL_TENANTS: Tenant[] = [
     name: 'Borja Álvarez',
     phone: '664 00 57 34',
     deposit: 100,
+    rentAmount: 250,
     leaseStartDate: '2021-07-28',
     emergencyContacts: [{
       name: 'Candelaria',

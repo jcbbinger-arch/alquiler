@@ -82,8 +82,15 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
 
             {payment.otherExpenses > 0 && (
               <div className="flex justify-between items-center text-slate-600 text-xs border-t border-slate-50 pt-2">
-                <span>Otros cargos (servicios/extras)</span>
+                <span>Otros cargos puntuales</span>
                 <span className="font-mono">{formatCurrency(payment.otherExpenses)}</span>
+              </div>
+            )}
+
+            {(payment.manualChargesAmount || 0) > 0 && (
+              <div className="flex justify-between items-center text-rose-600 text-xs border-t border-slate-50 pt-2 font-bold">
+                <span>Cargos acumulados previos</span>
+                <span className="font-mono">+{formatCurrency(payment.manualChargesAmount)}</span>
               </div>
             )}
             

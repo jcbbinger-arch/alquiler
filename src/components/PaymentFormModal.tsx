@@ -3,26 +3,27 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Payment } from '../types';
-import { X, Save, Zap, Droplets } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Payment, Tenant } from '../types';
+import { X, Save, Zap, Droplets, CheckCircle2, AlertCircle, Receipt } from 'lucide-react';
 import { MONTHS } from '../constants';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
 interface PaymentFormModalProps {
   payment?: Payment;
+  tenants: Tenant[];
   onClose: () => void;
   onSave: (payment: Payment) => void;
 }
 
-export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalProps) {
+export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentFormModalProps) {
   const [formData, setFormData] = useState<Payment>(payment || {
     id: Math.random().toString(36).substr(2, 9),
-    tenantId: 'tenant-1',
+    tenantId: tenants[0]?.id || '',
     year: new Date().getFullYear(),
     month: MONTHS[new Date().getMonth()],
-    rentAmount: 250,
+    rentAmount: tenants[0]?.rentAmount || 250,
     electricityTotalInvoice: 0,
     electricityPercentage: 50,
     electricityAmount: 0,
@@ -37,8 +38,26 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
     amountPaid: 0,
     paymentDate: new Date().toISOString().split('T')[0],
     isPaid: false,
-    notes: ''
+    notes: '',
+    manualChargesAmount: 0,
+    includedChargeIds: []
   });
+
+  const currentTenant = useMemo(() => 
+    tenants.find(t => t.id === formData.tenantId), [tenants, formData.tenantId]
+  );
+
+  const pendingManualCharges = useMemo(() => {
+    if (!currentTenant) return [];
+    return (currentTenant.manualCharges || []).filter(c => !c.isPaid);
+  }, [currentTenant]);
+
+  const selectedManualChargesAmount = useMemo(() => {
+    if (!pendingManualCharges.length) return 0;
+    return pendingManualCharges
+      .filter(c => formData.includedChargeIds?.includes(c.id))
+      .reduce((sum, c) => sum + c.amount, 0);
+  }, [pendingManualCharges, formData.includedChargeIds]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -47,6 +66,15 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
     setFormData(prev => {
       const updated = { ...prev, [name]: val };
       
+      // Update rent amount if tenant changes
+      if (name === 'tenantId') {
+        const tenant = tenants.find(t => t.id === val);
+        if (tenant) {
+          updated.rentAmount = tenant.rentAmount;
+          updated.includedChargeIds = []; // Clear charges if tenant changes
+        }
+      }
+
       // Auto-calculate electricityAmount if total or percentage changes
       if (name === 'electricityTotalInvoice' || name === 'electricityPercentage') {
         const total = name === 'electricityTotalInvoice' ? (val as number) : prev.electricityTotalInvoice;
@@ -69,9 +97,30 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
     setFormData(prev => ({ ...prev, isPaid: !prev.isPaid }));
   };
 
+  const handleToggleChargeSelection = (chargeId: string) => {
+    setFormData(prev => {
+      const currentIds = prev.includedChargeIds || [];
+      const updatedIds = currentIds.includes(chargeId)
+        ? currentIds.filter(id => id !== chargeId)
+        : [...currentIds, chargeId];
+      return { ...prev, includedChargeIds: updatedIds };
+    });
+  };
+
+  const calculateTotal = () => {
+    return formData.rentAmount + 
+           formData.electricityAmount + 
+           formData.waterAmount + 
+           formData.otherExpenses + 
+           selectedManualChargesAmount;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    onSave({
+      ...formData,
+      manualChargesAmount: selectedManualChargesAmount
+    });
   };
 
   return (
@@ -92,7 +141,19 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
 
         <form onSubmit={handleSubmit} className="p-8 space-y-8">
           {/* Header Data */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <div className="space-y-1.5 md:col-span-1">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Inquilino</label>
+              <select 
+                name="tenantId"
+                value={formData.tenantId}
+                onChange={handleChange}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-bold"
+                required
+              >
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Año</label>
               <input 
@@ -288,6 +349,52 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
             </div>
           </div>
 
+          {/* Pending Charges Section */}
+          {pendingManualCharges.length > 0 && (
+            <div className="pt-8 border-t border-slate-100">
+              <h4 className="font-black text-rose-600 uppercase tracking-widest text-[10px] mb-4 flex items-center gap-2">
+                <Receipt size={14} />
+                Seleccionar Cobros Pendientes (Checklist)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {pendingManualCharges.map(charge => {
+                  const isSelected = formData.includedChargeIds?.includes(charge.id);
+                  return (
+                    <button
+                      key={charge.id}
+                      type="button"
+                      onClick={() => handleToggleChargeSelection(charge.id)}
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-2xl border transition-all text-left group",
+                        isSelected 
+                          ? "bg-rose-50 border-rose-200 shadow-sm" 
+                          : "bg-white border-slate-100 hover:border-rose-100"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-6 h-6 rounded-lg flex items-center justify-center transition-all",
+                          isSelected ? "bg-rose-600 text-white" : "bg-slate-50 text-slate-300"
+                        )}>
+                          <CheckCircle2 size={14} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-700">{charge.concept}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{charge.period || 'Extra'}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn("text-xs font-black font-mono", isSelected ? "text-rose-600" : "text-slate-500")}>
+                          +{charge.amount.toFixed(2)} €
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Summary Section */}
           <div className="bg-slate-900 rounded-[2rem] p-6 lg:p-8 text-white flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex gap-8">
@@ -296,9 +403,9 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
                 <p className="text-xl font-mono font-bold line-through opacity-30 decoration-2">{formData.rentAmount.toFixed(2)} €</p>
               </div>
               <div className="text-rose-400">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400/60 mb-1">Total Gastos</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400/60 mb-1">Total Gastos (Inc. Pendientes)</p>
                 <p className="text-xl font-mono font-bold">
-                  +{(formData.electricityAmount + formData.waterAmount + formData.otherExpenses).toFixed(2)} €
+                  +{(formData.electricityAmount + formData.waterAmount + formData.otherExpenses + selectedManualChargesAmount).toFixed(2)} €
                 </p>
               </div>
             </div>
@@ -306,7 +413,7 @@ export function PaymentFormModal({ payment, onClose, onSave }: PaymentFormModalP
             <div className="text-right">
               <p className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-2">Total Neto a Cobrar</p>
               <p className="text-4xl font-black font-mono">
-                {(formData.rentAmount + formData.electricityAmount + formData.waterAmount + formData.otherExpenses).toFixed(2)} <span className="text-lg opacity-50 font-sans tracking-normal">€</span>
+                {calculateTotal().toFixed(2)} <span className="text-lg opacity-50 font-sans tracking-normal">€</span>
               </p>
             </div>
           </div>

@@ -25,10 +25,12 @@ export interface Payment {
   waterPeriodTo?: string;
 
   otherExpenses: number;
+  manualChargesAmount?: number;
   amountPaid: number;
   paymentDate: string;
   isPaid: boolean;
   notes?: string;
+  includedChargeIds?: string[];
 }
 
 export interface EmergencyContact {
@@ -71,6 +73,7 @@ export interface Tenant {
   depositMonths?: number;
   depositInitialDate?: string;
   additionalDeposits?: DepositPayment[];
+  rentAmount: number;
   leaseStartDate: string;
   leaseEndDate?: string;
   emergencyContacts: EmergencyContact[];
