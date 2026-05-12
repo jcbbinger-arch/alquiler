@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Tenant } from '../types';
-import { User, Phone, ShieldCheck, Calendar, Users, FileText, Plus, Receipt, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Phone, ShieldCheck, Calendar, Users, FileText, Plus, Receipt, AlertCircle, CheckCircle2, Zap, Droplets, Wallet, Trash2 } from 'lucide-react';
 import { formatCurrency, cn } from '../lib/utils';
 
 interface TenantProfileProps {
@@ -45,6 +45,27 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
     });
     setAddingChargeTo(null);
     setNewCharge({ concept: '', amount: 0, category: 'extra' });
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'luz': return <Zap size={18} />;
+      case 'agua': return <Droplets size={18} />;
+      case 'rotura': return <Trash2 size={18} />;
+      case 'atraso': return <AlertCircle size={18} />;
+      case 'servicio': return <FileText size={18} />;
+      default: return <Wallet size={18} />;
+    }
+  };
+
+  const getCategoryColor = (category: string, isPaid: boolean) => {
+    if (isPaid) return "bg-slate-100 text-slate-400";
+    switch (category) {
+      case 'luz': return "bg-amber-100 text-amber-600";
+      case 'agua': return "bg-blue-100 text-blue-600";
+      case 'extra': return "bg-rose-100 text-rose-600";
+      default: return "bg-slate-100 text-slate-600";
+    }
   };
 
   return (
@@ -255,15 +276,15 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                               onClick={() => handleToggleCharge(tenant, charge.id)}
                               className={cn(
                                 "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
-                                charge.isPaid ? "bg-slate-100 text-emerald-500" : "bg-rose-100 text-rose-600 hover:scale-105"
+                                charge.isPaid ? "bg-emerald-50 text-emerald-500" : getCategoryColor(charge.category, false)
                               )}
                             >
-                              {charge.isPaid ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                              {charge.isPaid ? <CheckCircle2 size={18} /> : getCategoryIcon(charge.category)}
                             </button>
                             <div>
                               <div className="flex items-center gap-2">
                                 <p className={cn("text-xs font-bold", charge.isPaid ? "text-slate-400" : "text-slate-800")}>
-                                  {charge.concept}
+                                  {charge.concept || charge.category.toUpperCase()}
                                 </p>
                                 {charge.period && (
                                   <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-black uppercase tracking-widest leading-none">

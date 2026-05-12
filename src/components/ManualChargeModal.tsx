@@ -99,6 +99,8 @@ export function ManualChargeModal({ tenants, onClose, onSave }: ManualChargeModa
                     required
                   >
                     <option value="extra">Cobro Extra</option>
+                    <option value="luz">Suministro Luz</option>
+                    <option value="agua">Suministro Agua</option>
                     <option value="rotura">Rotura / Reparación</option>
                     <option value="atraso">Atraso / Recargo</option>
                     <option value="servicio">Servicio Especial</option>

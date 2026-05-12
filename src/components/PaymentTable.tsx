@@ -9,7 +9,9 @@ import {
   Trash2, 
   ArrowRightCircle, 
   ChevronRight,
-  Calculator
+  Calculator,
+  Zap,
+  Droplets
 } from 'lucide-react';
 
 interface PaymentTableProps {
@@ -47,10 +49,18 @@ export function PaymentTable({ payments, onEdit, onViewReceipt, onDelete }: Paym
                 <td className="px-6 py-4 text-right">
                   <div className="flex flex-col items-end">
                     <span className="font-mono text-sm text-slate-900 font-bold">{formatCurrency(payment.totalToPay)}</span>
-                    <div className="flex gap-1 text-[10px] text-slate-400">
-                      <span>R:{payment.rentAmount}</span>
-                      <span>L:{payment.electricityAmount}</span>
-                      <span>A:{payment.waterAmount}</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-black text-slate-500 uppercase tracking-tighter">R:{payment.rentAmount}</span>
+                      {payment.electricityAmount > 0 && (
+                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 border border-amber-100 rounded text-[9px] font-black text-amber-600">
+                          <Zap size={8} /> {payment.electricityAmount}
+                        </div>
+                      )}
+                      {payment.waterAmount > 0 && (
+                        <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded text-[9px] font-black text-blue-600">
+                          <Droplets size={8} /> {payment.waterAmount}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </td>

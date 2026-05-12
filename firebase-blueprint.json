@@ -48,7 +48,7 @@
               "amount": { "type": "number" },
               "isPaid": { "type": "boolean" },
               "paymentDate": { "type": "string", "format": "date" },
-              "category": { "type": "string", "enum": ["rotura", "atraso", "extra", "servicio"] }
+              "category": { "type": "string", "enum": ["rotura", "atraso", "extra", "servicio", "luz", "agua"] }
             }
           }
         },
