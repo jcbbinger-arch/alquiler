@@ -224,8 +224,15 @@ export default function App() {
     const totalUtilities = payments.reduce((acc, p) => acc + p.electricityAmount + p.waterAmount, 0);
     const totalPaid = payments.reduce((acc, p) => acc + p.amountPaid, 0);
     
-    // Total debt is the sum of deficits in the latest calculation
-    const totalDebt = calculatedPayments.length > 0 
+    // Add manual charges to total debt if they are not paid
+    const manualChargesDebt = tenants.reduce((acc, t) => {
+      return acc + (t.manualCharges || [])
+        .filter(c => !c.isPaid)
+        .reduce((sum, c) => sum + c.amount, 0);
+    }, 0);
+
+    // Total monthly debt is the deficit in the latest calculation
+    const monthlyDebt = calculatedPayments.length > 0 
       ? Math.max(0, calculatedPayments[0].netDue - calculatedPayments[0].amountPaid) 
       : 0;
     
@@ -233,10 +240,10 @@ export default function App() {
       totalRent,
       totalUtilities,
       totalPaid,
-      totalDebt,
+      totalDebt: monthlyDebt + manualChargesDebt,
       netGain: totalRent - totalUtilities
     };
-  }, [payments, calculatedPayments]);
+  }, [payments, calculatedPayments, tenants]);
 
   const chartData = useMemo(() => {
     const data = [...years].reverse().map(year => {
@@ -254,9 +261,11 @@ export default function App() {
   const handleSavePayment = async (payment: Payment) => {
     if (!user) return;
     try {
+      // Deep clone and clean undefined values
+      const cleanPayment = JSON.parse(JSON.stringify(payment));
       const docRef = doc(db, 'payments', payment.id);
       await setDoc(docRef, {
-        ...payment,
+        ...cleanPayment,
         ownerId: user.uid,
         updatedAt: serverTimestamp()
       });
@@ -270,9 +279,11 @@ export default function App() {
   const handleSaveTenant = async (tenantToSave: Tenant) => {
     if (!user) return;
     try {
+      // Deep clone and clean undefined values
+      const cleanTenant = JSON.parse(JSON.stringify(tenantToSave));
       const docRef = doc(db, 'tenants', tenantToSave.id);
       await setDoc(docRef, {
-        ...tenantToSave,
+        ...cleanTenant,
         ownerId: user.uid,
         updatedAt: serverTimestamp()
       });
@@ -395,10 +406,16 @@ export default function App() {
               </p>
               <button 
                 onClick={() => auth.currentUser ? null : signInWithGoogle()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 transform hover:-translate-y-1"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 transform hover:-translate-y-1 block mx-auto"
               >
                 Acceder con Google
               </button>
+              <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Nota Técnica:</p>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  Si el panel de Google no aparece, asegúrate de que el dominio de esta aplicación esté añadido a "Dominios Autorizados" en tu consola de Firebase (Authentication → Settings → Authorized Domains).
+                </p>
+              </div>
             </div>
           ) : (
             <>

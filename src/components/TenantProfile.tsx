@@ -15,10 +15,36 @@ interface TenantProfileProps {
 }
 
 export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProfileProps) {
+  const [addingChargeTo, setAddingChargeTo] = React.useState<string | null>(null);
+  const [newCharge, setNewCharge] = React.useState({ concept: '', amount: 0, category: 'extra' as const });
+
   const getPendingManualChargesTotal = (tenant: Tenant) => {
     return (tenant.manualCharges || [])
       .filter(c => !c.isPaid)
       .reduce((sum, c) => sum + c.amount, 0);
+  };
+
+  const handleToggleCharge = async (tenant: Tenant, chargeId: string) => {
+    const updatedCharges = (tenant.manualCharges || []).map(c => 
+      c.id === chargeId ? { ...c, isPaid: !c.isPaid, paymentDate: !c.isPaid ? new Date().toISOString().split('T')[0] : undefined } : c
+    );
+    onEditTenant({ ...tenant, manualCharges: updatedCharges });
+  };
+
+  const handleAddCharge = async (tenant: Tenant) => {
+    if (!newCharge.concept || newCharge.amount <= 0) return;
+    const charge = {
+      id: Math.random().toString(36).substr(2, 9),
+      date: new Date().toISOString().split('T')[0],
+      isPaid: false,
+      ...newCharge
+    };
+    onEditTenant({
+      ...tenant,
+      manualCharges: [charge, ...(tenant.manualCharges || [])]
+    });
+    setAddingChargeTo(null);
+    setNewCharge({ concept: '', amount: 0, category: 'extra' });
   };
 
   return (
@@ -143,32 +169,97 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                   <div className="flex justify-between items-center mb-6">
                     <h4 className="text-sm font-black text-rose-600 uppercase tracking-widest flex items-center gap-2">
                       <Receipt size={18} />
-                      Cargos Manuales y Gastos Extra
+                      Ficha de Cobros y Gastos
                     </h4>
-                    {getPendingManualChargesTotal(tenant) > 0 && (
-                      <div className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg border border-rose-100 flex items-center gap-2">
-                        <AlertCircle size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Pendiente: {formatCurrency(getPendingManualChargesTotal(tenant))}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                      {getPendingManualChargesTotal(tenant) > 0 && (
+                        <div className="px-3 py-1 bg-rose-50 text-rose-600 rounded-lg border border-rose-100 flex items-center gap-2">
+                          <AlertCircle size={14} />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Pendiente: {formatCurrency(getPendingManualChargesTotal(tenant))}</span>
+                        </div>
+                      )}
+                      <button 
+                        onClick={() => setAddingChargeTo(tenant.id)}
+                        className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition-all border border-rose-100"
+                        title="Nuevo Cargo"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
                   </div>
+
+                  {addingChargeTo === tenant.id && (
+                    <div className="mb-6 p-6 bg-rose-50/30 border border-rose-100 rounded-3xl space-y-4 animate-in zoom-in-95">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                        <div className="md:col-span-1 space-y-1">
+                          <label className="text-[9px] font-black text-rose-400 uppercase ml-1">Tipo</label>
+                          <select 
+                            value={newCharge.category}
+                            onChange={(e) => setNewCharge(prev => ({ ...prev, category: e.target.value as any }))}
+                            className="w-full bg-white border border-rose-100 rounded-xl px-2 py-2 text-[10px] font-black uppercase outline-none"
+                          >
+                            <option value="extra">Extra</option>
+                            <option value="rotura">Rotura</option>
+                            <option value="atraso">Atraso</option>
+                            <option value="servicio">Servicio</option>
+                          </select>
+                        </div>
+                         <div className="md:col-span-7 space-y-1">
+                          <label className="text-[9px] font-black text-rose-400 uppercase ml-1">Concepto</label>
+                          <input 
+                            type="text" 
+                            placeholder="Ej. Recargo suministros, reparaciones..."
+                            value={newCharge.concept}
+                            onChange={(e) => setNewCharge(prev => ({ ...prev, concept: e.target.value }))}
+                            className="w-full bg-white border border-rose-100 rounded-xl px-4 py-2 text-xs font-bold outline-none"
+                          />
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                          <label className="text-[9px] font-black text-rose-400 uppercase ml-1">Importe</label>
+                          <input 
+                            type="number" 
+                            value={newCharge.amount}
+                            onChange={(e) => setNewCharge(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                            className="w-full bg-white border border-rose-100 rounded-xl px-4 py-2 text-xs font-black text-rose-600 outline-none"
+                          />
+                        </div>
+                        <div className="md:col-span-2 flex items-end gap-2">
+                           <button 
+                            onClick={() => handleAddCharge(tenant)}
+                            className="flex-1 h-9 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-200"
+                          >
+                            Agregar
+                          </button>
+                          <button 
+                            onClick={() => setAddingChargeTo(null)}
+                            className="w-9 h-9 bg-white text-slate-400 rounded-xl flex items-center justify-center hover:bg-slate-50 transition-all border border-rose-100"
+                          >
+                            <Plus size={16} className="rotate-45" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-1 gap-3">
                     {tenant.manualCharges && tenant.manualCharges.length > 0 ? (
                       tenant.manualCharges.map((charge) => (
                         <div key={charge.id} className={cn(
-                          "flex items-center justify-between p-4 rounded-2xl border transition-all",
+                          "flex items-center justify-between p-4 rounded-2xl border transition-all group/charge",
                           charge.isPaid 
-                            ? "bg-slate-50/50 border-slate-100 text-slate-400" 
+                            ? "bg-slate-50/50 border-slate-100 text-slate-400 opacity-60" 
                             : "bg-white border-rose-100 shadow-sm shadow-rose-50"
                         )}>
                           <div className="flex items-center gap-4">
-                            <div className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center",
-                              charge.isPaid ? "bg-slate-100" : "bg-rose-100 text-rose-600"
-                            )}>
+                            <button 
+                              onClick={() => handleToggleCharge(tenant, charge.id)}
+                              className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center transition-all",
+                                charge.isPaid ? "bg-slate-100 text-emerald-500" : "bg-rose-100 text-rose-600 hover:scale-105"
+                              )}
+                            >
                               {charge.isPaid ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                            </div>
+                            </button>
                             <div>
                               <p className={cn("text-xs font-bold", charge.isPaid ? "text-slate-400" : "text-slate-800")}>
                                 {charge.concept}
@@ -179,18 +270,18 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className={cn("text-sm font-black", charge.isPaid ? "text-slate-400" : "text-rose-600")}>
+                            <p className={cn("text-sm font-black", charge.isPaid ? "text-slate-400 line-through" : "text-rose-600")}>
                               {formatCurrency(charge.amount)}
                             </p>
                             <p className="text-[8px] font-black uppercase tracking-widest opacity-50">
-                              {charge.isPaid ? 'Pagado' : 'Pendiente'}
+                              {charge.isPaid ? `Pagado (${new Date(charge.paymentDate || charge.date).toLocaleDateString('es-ES')})` : 'Pendiente cobro'}
                             </p>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No hay cargos registrados</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No hay cobros internos pendientes</p>
                       </div>
                     )}
                   </div>
