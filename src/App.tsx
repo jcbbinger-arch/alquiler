@@ -56,6 +56,7 @@ import { Payment, CalculatedPayment, Tenant, DebtDetail, ManualCharge } from './
 import { INITIAL_PAYMENTS, MONTHS, INITIAL_TENANTS } from './constants';
 import { auth, db, signInWithGoogle } from './firebase';
 import { StatsGrid } from './components/StatsGrid';
+import { YearlyStats } from './components/YearlyStats';
 import { PaymentTable } from './components/PaymentTable';
 import { TenantProfile } from './components/TenantProfile';
 import { TenantFormModal } from './components/TenantFormModal';
@@ -107,7 +108,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'tenant'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'tenant' | 'stats'>('dashboard');
   const [editingPayment, setEditingPayment] = useState<Payment | undefined>(undefined);
   const [editingTenant, setEditingTenant] = useState<Tenant | undefined>(undefined);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -397,6 +398,16 @@ export default function App() {
             <User size={20} />
             <span className="font-medium">Inquilino</span>
           </button>
+           <button 
+            onClick={() => setActiveTab('stats')}
+            className={cn(
+              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+              activeTab === 'stats' ? "bg-indigo-50 text-indigo-700 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+            )}
+          >
+            <PieChartIcon size={20} />
+            <span className="font-medium">Estadísticas</span>
+          </button>
         </nav>
 
         <div className="mt-auto bg-slate-100 p-5 rounded-2xl border border-slate-200">
@@ -623,6 +634,15 @@ export default function App() {
                     </div>
                   );
                 })}
+              </motion.div>
+            ) : activeTab === 'stats' ? (
+              <motion.div
+                key="stats"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+              >
+                <YearlyStats payments={payments} />
               </motion.div>
             ) : activeTab === 'tenant' ? (
               <motion.div
