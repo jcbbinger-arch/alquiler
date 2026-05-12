@@ -55,10 +55,23 @@ export function PaymentTable({ payments, onEdit, onViewReceipt, onDelete }: Paym
                     <div className="flex items-center gap-2 mt-1">
                       <span className="px-1.5 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-black text-slate-500 uppercase tracking-tighter" title="Alquiler Base">R:{payment.rentAmount}</span>
                       
-                      {(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0)) > 0 && (
-                        <div className="px-1.5 py-0.5 bg-rose-50 border border-rose-100 rounded text-[9px] font-black text-rose-600 flex items-center gap-1" title="Suma de Gastos (Luz + Agua + Otros)">
-                          <span>GASTOS:</span>
-                          <span>{formatCurrency(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0))}</span>
+                      {(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0) + (payment.manualChargesAmount || 0)) > 0 && (
+                        <div className="flex flex-wrap items-center justify-end gap-1.5 mt-1">
+                          {payment.electricityAmount > 0 && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 border border-amber-100 rounded text-[9px] font-black text-amber-600" title="Luz">
+                              <Zap size={8} /> {payment.electricityAmount.toFixed(2)}
+                            </div>
+                          )}
+                          {payment.waterAmount > 0 && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded text-[9px] font-black text-blue-600" title="Agua">
+                              <Droplets size={8} /> {payment.waterAmount.toFixed(2)}
+                            </div>
+                          )}
+                          {(payment.otherExpenses > 0 || (payment.manualChargesAmount || 0) > 0) && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-rose-50 border border-rose-100 rounded text-[9px] font-black text-rose-600" title="Otros / Pendientes">
+                              <Receipt size={8} /> {(payment.otherExpenses + (payment.manualChargesAmount || 0)).toFixed(2)}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

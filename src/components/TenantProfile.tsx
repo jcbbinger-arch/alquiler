@@ -169,28 +169,31 @@ export function TenantProfile({ tenants, payments, onAddTenant, onEditTenant }: 
                       const tenantPayments = payments.filter(p => p.tenantId === tenant.id);
                       const totalPaid = tenantPayments.reduce((sum, p) => sum + p.amountPaid, 0);
                       const totalRent = tenantPayments.reduce((sum, p) => sum + p.rentAmount, 0);
-                      const totalUtils = tenantPayments.reduce((sum, p) => sum + p.electricityAmount + p.waterAmount, 0);
-                      const yearsActive = [...new Set(tenantPayments.map(p => p.year))].sort((a,b) => b-a);
+                      const totalElectricity = tenantPayments.reduce((sum, p) => sum + p.electricityAmount, 0);
+                      const totalWater = tenantPayments.reduce((sum, p) => sum + p.waterAmount, 0);
+                      const totalOthers = tenantPayments.reduce((sum, p) => sum + (p.otherExpenses || 0) + (p.manualChargesAmount || 0), 0);
                       
                       return (
                         <>
                           <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100/50">
                             <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400 mb-1">Total Pagado</p>
-                            <p className="text-lg font-black text-indigo-700 font-mono italic">{formatCurrency(totalPaid)}</p>
-                          </div>
-                          <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100/50">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500 mb-1">Beneficio Bruto</p>
-                            <p className="text-lg font-black text-emerald-700 font-mono italic">{formatCurrency(totalRent)}</p>
+                            <p className="text-xl font-black text-indigo-700 font-mono italic">{formatCurrency(totalPaid)}</p>
+                            <p className="text-[10px] font-bold text-indigo-300 mt-1 uppercase tracking-widest">Alquiler: {formatCurrency(totalRent)}</p>
                           </div>
                           <div className="bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1">Consumo Suministros</p>
-                            <p className="text-lg font-black text-amber-700 font-mono italic">{formatCurrency(totalUtils)}</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-amber-500 mb-1">Suministro Luz</p>
+                            <p className="text-xl font-black text-amber-700 font-mono italic">{formatCurrency(totalElectricity)}</p>
+                            <p className="text-[10px] font-bold text-amber-400 mt-1 uppercase tracking-widest">Media: {formatCurrency(totalElectricity / (tenantPayments.length || 1))}</p>
                           </div>
-                          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Media Mensual</p>
-                            <p className="text-lg font-black text-slate-700 font-mono italic">
-                              {tenantPayments.length > 0 ? formatCurrency(totalPaid / tenantPayments.length) : '€0,00'}
-                            </p>
+                          <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-blue-500 mb-1">Suministro Agua</p>
+                            <p className="text-xl font-black text-blue-700 font-mono italic">{formatCurrency(totalWater)}</p>
+                            <p className="text-[10px] font-bold text-blue-400 mt-1 uppercase tracking-widest">Media: {formatCurrency(totalWater / (tenantPayments.length || 1))}</p>
+                          </div>
+                          <div className="bg-rose-50/50 p-4 rounded-2xl border border-rose-100/50">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-rose-500 mb-1">Otros Gastos</p>
+                            <p className="text-xl font-black text-rose-700 font-mono italic">{formatCurrency(totalOthers)}</p>
+                            <p className="text-[10px] font-bold text-rose-400 mt-1 uppercase tracking-widest">Total histórico</p>
                           </div>
                         </>
                       );
