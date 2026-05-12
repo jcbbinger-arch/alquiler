@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tenant, ManualCharge } from '../types';
 import { X, Save, Calendar, Plus, Wallet, Receipt, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, handleNumericKeyDown, parseSpanishNumber } from '../lib/utils';
 
 interface ManualChargeModalProps {
   tenants: Tenant[];
@@ -134,12 +134,14 @@ export function ManualChargeModal({ tenants, onClose, onSave }: ManualChargeModa
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Importe (€)</label>
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="decimal"
                     value={charge.amount || ''}
-                    onChange={(e) => setCharge(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                    onChange={(e) => setCharge(prev => ({ ...prev, amount: parseSpanishNumber(e.target.value) }))}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-full bg-slate-50 border-2 border-transparent focus:border-rose-100 focus:bg-white rounded-2xl px-6 py-4 text-sm font-black text-rose-600 transition-all outline-none"
                     required
-                    placeholder="0.00"
+                    placeholder="0,00"
                   />
                 </div>
               </div>

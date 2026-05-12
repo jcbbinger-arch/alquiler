@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Tenant, EmergencyContact, TenantNote, ManualCharge } from '../types';
 import { X, Save, Calendar, Plus, Trash2, MessageSquare, ShieldCheck, Wallet, Receipt, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, handleNumericKeyDown, parseSpanishNumber } from '../lib/utils';
 
 interface TenantFormModalProps {
   tenant?: Tenant;
@@ -43,9 +43,10 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
+    const isNumeric = ['deposit', 'depositMonths', 'rentAmount'].includes(name);
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
+      [name]: isNumeric ? parseSpanishNumber(value) : value
     }));
   };
 
@@ -273,10 +274,12 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Total Fianza Inicial (€)</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="decimal"
                   name="deposit"
                   value={formData.deposit}
                   onChange={handleChange}
+                  onKeyDown={handleNumericKeyDown}
                   className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3.5 outline-none font-black text-slate-700 text-lg shadow-sm"
                   required
                 />
@@ -284,10 +287,12 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Mensualidades Equiv.</label>
                 <input 
-                  type="number" 
+                  type="text" 
+                  inputMode="numeric"
                   name="depositMonths"
                   value={formData.depositMonths}
                   onChange={handleChange}
+                  onKeyDown={handleNumericKeyDown}
                   className="w-full bg-white border border-slate-200 rounded-2xl px-5 py-3.5 outline-none font-bold text-slate-600 shadow-sm"
                 />
               </div>
@@ -313,9 +318,11 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold text-slate-400 uppercase pl-1">Cantidad (€)</label>
                         <input 
-                          type="number" 
+                          type="text" 
+                          inputMode="decimal"
                           value={dep.amount}
-                          onChange={(e) => updateDepositRecord(dep.id, 'amount', parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateDepositRecord(dep.id, 'amount', parseSpanishNumber(e.target.value))}
+                          onKeyDown={handleNumericKeyDown}
                           className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-sm font-bold"
                         />
                       </div>
@@ -470,9 +477,11 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
                   <div className="md:col-span-2 space-y-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase">Importe (€)</label>
                     <input 
-                      type="number" 
+                      type="text" 
+                      inputMode="decimal"
                       value={charge.amount}
-                      onChange={(e) => updateManualCharge(charge.id, 'amount', parseFloat(e.target.value) || 0)}
+                      onChange={(e) => updateManualCharge(charge.id, 'amount', parseSpanishNumber(e.target.value))}
+                      onKeyDown={handleNumericKeyDown}
                       className="w-full bg-slate-50 border-none rounded-xl px-3 py-2 text-xs font-black text-rose-600 outline-none"
                     />
                   </div>

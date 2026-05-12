@@ -31,6 +31,8 @@ export interface Payment {
   isPaid: boolean;
   notes?: string;
   includedChargeIds?: string[];
+  includeElectricity?: boolean;
+  includeWater?: boolean;
 }
 
 export interface EmergencyContact {

@@ -8,7 +8,7 @@ import { Payment, Tenant } from '../types';
 import { X, Save, Zap, Droplets, CheckCircle2, AlertCircle, Receipt } from 'lucide-react';
 import { MONTHS } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn } from '../lib/utils';
+import { cn, handleNumericKeyDown, parseSpanishNumber } from '../lib/utils';
 
 interface PaymentFormModalProps {
   payment?: Payment;
@@ -40,7 +40,9 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
     isPaid: false,
     notes: '',
     manualChargesAmount: 0,
-    includedChargeIds: []
+    includedChargeIds: [],
+    includeElectricity: true,
+    includeWater: true
   });
 
   const currentTenant = useMemo(() => 
@@ -61,7 +63,9 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    const val = type === 'number' ? parseFloat(value) || 0 : value;
+    // Special handling for inputs that are treated as numeric
+    const isNumeric = ['rentAmount', 'amountPaid', 'electricityTotalInvoice', 'electricityPercentage', 'waterTotalInvoice', 'waterPercentage', 'otherExpenses', 'year'].includes(name);
+    const val = isNumeric ? parseSpanishNumber(value) : value;
     
     setFormData(prev => {
       const updated = { ...prev, [name]: val };
@@ -109,8 +113,8 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
 
   const calculateTotal = () => {
     return formData.rentAmount + 
-           formData.electricityAmount + 
-           formData.waterAmount + 
+           (formData.includeElectricity !== false ? formData.electricityAmount : 0) + 
+           (formData.includeWater !== false ? formData.waterAmount : 0) + 
            formData.otherExpenses + 
            selectedManualChargesAmount;
   };
@@ -157,10 +161,12 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Año</label>
               <input 
-                type="number" 
+                type="text" 
+                inputMode="numeric"
                 name="year"
                 value={formData.year}
                 onChange={handleChange}
+                onKeyDown={handleNumericKeyDown}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
                 required
               />
@@ -180,11 +186,12 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Alquiler Base (€)</label>
               <input 
-                type="number" 
+                type="text" 
+                inputMode="decimal"
                 name="rentAmount"
-                step="0.01"
                 value={formData.rentAmount}
                 onChange={handleChange}
+                onKeyDown={handleNumericKeyDown}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
                 required
               />
@@ -192,11 +199,12 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
             <div className="space-y-1.5">
               <label className="text-xs font-black text-blue-600 uppercase tracking-wider italic">Entregado / Pagado (€)</label>
               <input 
-                type="number" 
+                type="text" 
+                inputMode="decimal"
                 name="amountPaid"
-                step="0.01"
                 value={formData.amountPaid}
                 onChange={handleChange}
+                onKeyDown={handleNumericKeyDown}
                 className="w-full bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-black text-blue-700 text-lg shadow-sm"
               />
             </div>
@@ -205,30 +213,48 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
             {/* Electricity Panel */}
             <div className="bg-amber-50/50 p-6 rounded-3xl border border-amber-100 space-y-6 group hover:bg-amber-50 transition-colors">
-              <h4 className="font-black text-amber-900 uppercase tracking-tighter flex items-center gap-2">
-                <Zap size={18} className="text-amber-500" />
-                Suministro Eléctrico (Luz)
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-black text-amber-900 uppercase tracking-tighter flex items-center gap-2">
+                  <Zap size={18} className="text-amber-500" />
+                  Suministro Eléctrico (Luz)
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, includeElectricity: !prev.includeElectricity }))}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all font-bold text-[9px] uppercase tracking-widest",
+                    formData.includeElectricity !== false
+                      ? "bg-amber-600 border-amber-600 text-white shadow-lg shadow-amber-200"
+                      : "bg-white border-amber-200 text-amber-400"
+                  )}
+                >
+                  <CheckCircle2 size={12} />
+                  {formData.includeElectricity !== false ? 'Incluido' : 'Pospuesto'}
+                </button>
+              </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-amber-700 uppercase">Factura Total (€)</label>
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="decimal"
                     name="electricityTotalInvoice"
-                    step="0.01"
                     value={formData.electricityTotalInvoice}
                     onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-full bg-white border border-amber-200 rounded-xl px-4 py-2.5 outline-none focus:border-amber-500 font-mono shadow-sm"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-amber-700 uppercase">% del Inquilino</label>
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="numeric"
                     name="electricityPercentage"
                     value={formData.electricityPercentage}
                     onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-full bg-white border border-amber-200 rounded-xl px-4 py-2.5 outline-none focus:border-amber-500 font-mono shadow-sm"
                   />
                 </div>
@@ -265,30 +291,48 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
 
             {/* Water Panel */}
             <div className="bg-sky-50/50 p-6 rounded-3xl border border-sky-100 space-y-6 group hover:bg-sky-50 transition-colors">
-              <h4 className="font-black text-sky-900 uppercase tracking-tighter flex items-center gap-2">
-                <Droplets size={18} className="text-sky-500" />
-                Suministro de Agua
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="font-black text-sky-900 uppercase tracking-tighter flex items-center gap-2">
+                  <Droplets size={18} className="text-sky-500" />
+                  Suministro de Agua
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, includeWater: !prev.includeWater }))}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all font-bold text-[9px] uppercase tracking-widest",
+                    formData.includeWater !== false
+                      ? "bg-sky-600 border-sky-600 text-white shadow-lg shadow-sky-200"
+                      : "bg-white border-sky-200 text-sky-400"
+                  )}
+                >
+                  <CheckCircle2 size={12} />
+                  {formData.includeWater !== false ? 'Incluido' : 'Pospuesto'}
+                </button>
+              </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-sky-700 uppercase">Factura Total (€)</label>
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="decimal"
                     name="waterTotalInvoice"
-                    step="0.01"
                     value={formData.waterTotalInvoice}
                     onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-full bg-white border border-sky-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-500 font-mono shadow-sm"
                   />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-sky-700 uppercase">% del Inquilino</label>
                   <input 
-                    type="number" 
+                    type="text" 
+                    inputMode="numeric"
                     name="waterPercentage"
                     value={formData.waterPercentage}
                     onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-full bg-white border border-sky-200 rounded-xl px-4 py-2.5 outline-none focus:border-sky-500 font-mono shadow-sm"
                   />
                 </div>
@@ -329,11 +373,12 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Otros Gastos Varios (€)</label>
               <input 
-                type="number" 
+                type="text" 
+                inputMode="decimal"
                 name="otherExpenses"
-                step="0.01"
                 value={formData.otherExpenses}
                 onChange={handleChange}
+                onKeyDown={handleNumericKeyDown}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
               />
             </div>
@@ -397,21 +442,33 @@ export function PaymentFormModal({ payment, tenants, onClose, onSave }: PaymentF
 
           {/* Summary Section */}
           <div className="bg-slate-900 rounded-[2rem] p-6 lg:p-8 text-white flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex gap-8">
+            <div className="flex flex-wrap justify-center md:justify-start gap-8">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Alquiler Base</p>
                 <p className="text-xl font-mono font-bold line-through opacity-30 decoration-2">{formData.rentAmount.toFixed(2)} €</p>
               </div>
               <div className="text-rose-400">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400/60 mb-1">Total Gastos (Inc. Pendientes)</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-400/60 mb-1">Cargos Mes</p>
                 <p className="text-xl font-mono font-bold">
-                  +{(formData.electricityAmount + formData.waterAmount + formData.otherExpenses + selectedManualChargesAmount).toFixed(2)} €
+                  +{( (formData.includeElectricity !== false ? formData.electricityAmount : 0) + 
+                      (formData.includeWater !== false ? formData.waterAmount : 0) + 
+                      formData.otherExpenses + 
+                      selectedManualChargesAmount).toFixed(2)} €
                 </p>
               </div>
+              {(formData.includeElectricity === false || formData.includeWater === false) && (
+                <div className="text-amber-400 bg-amber-400/10 px-4 py-2 rounded-2xl border border-amber-400/20">
+                  <p className="text-[9px] font-black uppercase tracking-[0.2em] mb-1">Pospuesto (Próx. Recibo)</p>
+                  <p className="text-sm font-mono font-bold">
+                    +{( (formData.includeElectricity === false ? formData.electricityAmount : 0) + 
+                        (formData.includeWater === false ? formData.waterAmount : 0) ).toFixed(2)} €
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="text-right">
-              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-2">Total Neto a Cobrar</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-400 mb-2">Total a Cobrar Hoy</p>
               <p className="text-4xl font-black font-mono">
                 {calculateTotal().toFixed(2)} <span className="text-lg opacity-50 font-sans tracking-normal">€</span>
               </p>

@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Calculator,
   Zap,
-  Droplets
+  Droplets,
+  Receipt
 } from 'lucide-react';
 
 interface PaymentTableProps {
@@ -58,12 +59,22 @@ export function PaymentTable({ payments, onEdit, onViewReceipt, onDelete }: Paym
                       {(payment.electricityAmount + payment.waterAmount + (payment.otherExpenses || 0) + (payment.manualChargesAmount || 0)) > 0 && (
                         <div className="flex flex-wrap items-center justify-end gap-1.5 mt-1">
                           {payment.electricityAmount > 0 && (
-                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-50 border border-amber-100 rounded text-[9px] font-black text-amber-600" title="Luz">
+                            <div className={cn(
+                              "flex items-center gap-0.5 px-1.5 py-0.5 border rounded text-[9px] font-black transition-opacity",
+                              payment.includeElectricity !== false 
+                                ? "bg-amber-50 border-amber-100 text-amber-600" 
+                                : "bg-slate-50 border-slate-200 text-slate-400 opacity-50"
+                            )} title={payment.includeElectricity !== false ? "Luz" : "Luz (Pospuesta)"}>
                               <Zap size={8} /> {payment.electricityAmount.toFixed(2)}
                             </div>
                           )}
                           {payment.waterAmount > 0 && (
-                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded text-[9px] font-black text-blue-600" title="Agua">
+                            <div className={cn(
+                              "flex items-center gap-0.5 px-1.5 py-0.5 border rounded text-[9px] font-black transition-opacity",
+                              payment.includeWater !== false 
+                                ? "bg-blue-50 border-blue-100 text-blue-600" 
+                                : "bg-slate-50 border-slate-200 text-slate-400 opacity-50"
+                            )} title={payment.includeWater !== false ? "Agua" : "Agua (Pospuesta)"}>
                               <Droplets size={8} /> {payment.waterAmount.toFixed(2)}
                             </div>
                           )}

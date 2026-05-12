@@ -173,10 +173,15 @@ export default function App() {
 
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
-      const totalToPay = p.rentAmount + p.electricityAmount + p.waterAmount + p.otherExpenses + (p.manualChargesAmount || 0);
+      // totalToPay for THIS MONTH only includes what is NOT postponed
+      const totalToPay = p.rentAmount + 
+                         (p.includeElectricity !== false ? p.electricityAmount : 0) + 
+                         (p.includeWater !== false ? p.waterAmount : 0) + 
+                         p.otherExpenses + (p.manualChargesAmount || 0);
       
       const pendingDebts: DebtDetail[] = [];
       
+      // Add any real debt from history
       historicalResult.forEach(prevCalc => {
           const deficit = prevCalc.netDue - prevCalc.amountPaid;
           if (deficit > 0) {
@@ -185,6 +190,21 @@ export default function App() {
                   period: `${prevCalc.month} ${prevCalc.year}`,
                   amount: deficit
               });
+          }
+          // ADDITION: Also add postponed utilities from previous months as pending debts
+          if (prevCalc.includeElectricity === false && prevCalc.electricityAmount > 0) {
+            pendingDebts.push({
+              concept: 'Luz pospuesta',
+              period: `${prevCalc.month} ${prevCalc.year}`,
+              amount: prevCalc.electricityAmount
+            });
+          }
+          if (prevCalc.includeWater === false && prevCalc.waterAmount > 0) {
+            pendingDebts.push({
+              concept: 'Agua pospuesta',
+              period: `${prevCalc.month} ${prevCalc.year}`,
+              amount: prevCalc.waterAmount
+            });
           }
       });
 
