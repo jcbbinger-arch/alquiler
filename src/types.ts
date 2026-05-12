@@ -31,19 +31,40 @@ export interface Payment {
   notes?: string;
 }
 
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
+  phone: string;
+}
+
+export interface TenantNote {
+  id: string;
+  date: string;
+  content: string;
+  category?: 'comportamiento' | 'rotura' | 'incidencia' | 'general';
+}
+
+export interface DepositPayment {
+  id: string;
+  amount: number;
+  date: string;
+  notes?: string;
+}
+
 export interface Tenant {
   id: string;
   name: string;
   phone: string;
   dni?: string;
-  deposit: number;
+  deposit: number; // Total deposit sum
+  depositMonths?: number;
+  depositInitialDate?: string;
+  additionalDeposits?: DepositPayment[];
   leaseStartDate: string;
-  leaseEndDate?: string; // Optional end date
-  emergencyContact: {
-    name: string;
-    relationship: string;
-    phone: string;
-  };
+  leaseEndDate?: string;
+  emergencyContacts: EmergencyContact[];
+  notes?: TenantNote[];
+  ownerId?: string;
 }
 
 export interface DebtDetail {

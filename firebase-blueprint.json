@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "Tenant": {
+      "title": "Tenant",
+      "description": "Details of a tenant including active lease, contact info, notes and deposits",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "dni": { "type": "string" },
+        "deposit": { "type": "number" },
+        "depositMonths": { "type": "number" },
+        "depositInitialDate": { "type": "string", "format": "date" },
+        "additionalDeposits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "amount": { "type": "number" },
+              "date": { "type": "string", "format": "date" },
+              "notes": { "type": "string" }
+            }
+          }
+        },
+        "leaseStartDate": { "type": "string", "format": "date" },
+        "leaseEndDate": { "type": "string", "format": "date" },
+        "emergencyContacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "relationship": { "type": "string" },
+              "phone": { "type": "string" }
+            }
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "date": { "type": "string", "format": "date" },
+              "content": { "type": "string" },
+              "category": { "type": "string", "enum": ["comportamiento", "rotura", "incidencia", "general"] }
+            }
+          }
+        },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "name", "leaseStartDate", "ownerId"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "Monthly payment record for rent and utilities",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "year": { "type": "number" },
+        "month": { "type": "string" },
+        "rentAmount": { "type": "number" },
+        "electricityTotalInvoice": { "type": "number" },
+        "electricityPercentage": { "type": "number" },
+        "electricityAmount": { "type": "number" },
+        "electricityPeriodFrom": { "type": "string", "format": "date" },
+        "electricityPeriodTo": { "type": "string", "format": "date" },
+        "waterTotalInvoice": { "type": "number" },
+        "waterPercentage": { "type": "number" },
+        "waterAmount": { "type": "number" },
+        "waterPeriodFrom": { "type": "string", "format": "date" },
+        "waterPeriodTo": { "type": "string", "format": "date" },
+        "otherExpenses": { "type": "number" },
+        "amountPaid": { "type": "number" },
+        "paymentDate": { "type": "string", "format": "date" },
+        "isPaid": { "type": "boolean" },
+        "notes": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "tenantId", "year", "month", "rentAmount", "ownerId"]
+    }
+  },
+  "firestore": {
+    "tenants/{tenantId}": {
+      "schema": "Tenant",
+      "description": "Individual tenant records"
+    },
+    "payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Individual payment records"
+    }
+  }
+}

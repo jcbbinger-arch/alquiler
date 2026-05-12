@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Phase 4: Entity Validation Helpers
+    function isValidTenant(data) {
+      return data.keys().hasAll(['id', 'name', 'leaseStartDate', 'ownerId']) 
+          && data.ownerId == request.auth.uid
+          && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+          && data.id is string && data.id.size() <= 64;
+    }
+
+    function isValidPayment(data) {
+      return data.keys().hasAll(['id', 'tenantId', 'year', 'month', 'rentAmount', 'ownerId'])
+          && data.ownerId == request.auth.uid
+          && data.tenantId is string && data.tenantId.size() <= 64
+          && data.month is string && data.month.size() > 0
+          && data.year is number
+          && data.rentAmount is number && data.rentAmount >= 0;
+    }
+
+    // match /tenants/{tenantId}
+    match /tenants/{tenantId} {
+      allow get: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(tenantId) && isValidTenant(incoming());
+      allow update: if isSignedIn() && isValidTenant(incoming()) 
+                     && incoming().ownerId == existing().ownerId
+                     && incoming().id == existing().id;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+
+    // match /payments/{paymentId}
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && existing().ownerId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(paymentId) && isValidPayment(incoming());
+      allow update: if isSignedIn() && isValidPayment(incoming())
+                     && incoming().ownerId == existing().ownerId
+                     && incoming().id == existing().id;
+      allow delete: if isSignedIn() && existing().ownerId == request.auth.uid;
+    }
+  }
+}

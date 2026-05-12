@@ -1,15 +1,16 @@
 import React from 'react';
-import { CalculatedPayment } from '../types';
+import { CalculatedPayment, Tenant } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { Printer, X, Download, Zap, Droplets } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface ReceiptModalProps {
   payment: CalculatedPayment;
+  tenant?: Tenant;
   onClose: () => void;
 }
 
-export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
+export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
   const handlePrint = () => {
     window.print();
   };
@@ -54,7 +55,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
           <div className="grid grid-cols-2 gap-8 mb-10 pb-10 border-b border-slate-100">
             <div>
               <p className="text-xs font-bold text-slate-400 uppercase mb-1">Para:</p>
-              <p className="font-bold text-slate-800">Inquilino: Borja Álvarez</p>
+              <p className="font-bold text-slate-800">Inquilino: {tenant?.name || 'Borja Álvarez'}</p>
               <p className="text-slate-600 text-sm italic">Periodo: {payment.month} {payment.year}</p>
             </div>
             <div className="text-right">

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, 
@@ -22,7 +22,8 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  LogIn
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -36,20 +37,75 @@ import {
   LineChart,
   Line
 } from 'recharts';
+import { 
+  onAuthStateChanged, 
+  User as FirebaseUser 
+} from 'firebase/auth';
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot, 
+  setDoc, 
+  doc, 
+  deleteDoc,
+  serverTimestamp
+} from 'firebase/firestore';
 
 import { Payment, CalculatedPayment, Tenant, DebtDetail } from './types';
 import { INITIAL_PAYMENTS, MONTHS, INITIAL_TENANTS } from './constants';
+import { auth, db, signInWithGoogle } from './firebase';
 import { StatsGrid } from './components/StatsGrid';
 import { PaymentTable } from './components/PaymentTable';
 import { TenantProfile } from './components/TenantProfile';
 import { TenantFormModal } from './components/TenantFormModal';
 import { PaymentFormModal } from './components/PaymentFormModal';
 import { ReceiptModal } from './components/ReceiptModal';
+import { AuthContainer } from './components/AuthContainer';
 import { cn, formatCurrency } from './lib/utils';
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 export default function App() {
-  const [payments, setPayments] = useState<Payment[]>(INITIAL_PAYMENTS);
-  const [tenants, setTenants] = useState<Tenant[]>(INITIAL_TENANTS);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'history' | 'tenant'>('dashboard');
   const [editingPayment, setEditingPayment] = useState<Payment | undefined>(undefined);
   const [editingTenant, setEditingTenant] = useState<Tenant | undefined>(undefined);
@@ -57,6 +113,47 @@ export default function App() {
   const [showTenantModal, setShowTenantModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<CalculatedPayment | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setTenants([]);
+      setPayments([]);
+      return;
+    }
+
+    const tenantsQuery = query(
+      collection(db, 'tenants'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const paymentsQuery = query(
+      collection(db, 'payments'),
+      where('ownerId', '==', user.uid)
+    );
+
+    const unsubTenants = onSnapshot(tenantsQuery, (snapshot) => {
+      const data = snapshot.docs.map(doc => doc.data() as Tenant);
+      setTenants(data);
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'tenants'));
+
+    const unsubPayments = onSnapshot(paymentsQuery, (snapshot) => {
+      const data = snapshot.docs.map(doc => doc.data() as Payment);
+      setPayments(data);
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'payments'));
+
+    return () => {
+      unsubTenants();
+      unsubPayments();
+    };
+  }, [user]);
 
   // Currently we just work with the latest tenant as the "active" one for new payments
   const activeTenant = useMemo(() => tenants.find(t => !t.leaseEndDate) || tenants[tenants.length - 1], [tenants]);
@@ -154,33 +251,45 @@ export default function App() {
     return data;
   }, [payments, years]);
 
-  const handleSavePayment = (payment: Payment) => {
-    setPayments(prev => {
-      const exists = prev.find(p => p.id === payment.id);
-      if (exists) {
-        return prev.map(p => p.id === payment.id ? payment : p);
-      }
-      return [payment, ...prev]; // Latest first
-    });
-    setShowAddModal(false);
-    setEditingPayment(undefined);
+  const handleSavePayment = async (payment: Payment) => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, 'payments', payment.id);
+      await setDoc(docRef, {
+        ...payment,
+        ownerId: user.uid,
+        updatedAt: serverTimestamp()
+      });
+      setShowAddModal(false);
+      setEditingPayment(undefined);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `payments/${payment.id}`);
+    }
   };
 
-  const handleSaveTenant = (tenantToSave: Tenant) => {
-    setTenants(prev => {
-      const exists = prev.find(t => t.id === tenantToSave.id);
-      if (exists) {
-        return prev.map(t => t.id === tenantToSave.id ? tenantToSave : t);
-      }
-      return [...prev, tenantToSave];
-    });
-    setShowTenantModal(false);
-    setEditingTenant(undefined);
+  const handleSaveTenant = async (tenantToSave: Tenant) => {
+    if (!user) return;
+    try {
+      const docRef = doc(db, 'tenants', tenantToSave.id);
+      await setDoc(docRef, {
+        ...tenantToSave,
+        ownerId: user.uid,
+        updatedAt: serverTimestamp()
+      });
+      setShowTenantModal(false);
+      setEditingTenant(undefined);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `tenants/${tenantToSave.id}`);
+    }
   };
 
-  const handleDeletePayment = (id: string) => {
+  const handleDeletePayment = async (id: string) => {
     if (window.confirm('¿Estás seguro de eliminar este registro?')) {
-      setPayments(prev => prev.filter(p => p.id !== id));
+      try {
+        await deleteDoc(doc(db, 'payments', id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `payments/${id}`);
+      }
     }
   };
 
@@ -243,9 +352,12 @@ export default function App() {
       {/* Main Content */}
       <main className="lg:ml-64 p-4 lg:p-8">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900">Gestión de Alquiler</h2>
-            <p className="text-slate-500 mt-1">Sifras Reales & Control de Suministros</p>
+          <div className="flex items-center gap-6">
+            <div className="hidden sm:block">
+              <h2 className="text-2xl lg:text-3xl font-bold text-slate-900">Gestión de Alquiler</h2>
+              <p className="text-slate-500 mt-1">Sifras Reales & Control de Suministros</p>
+            </div>
+            <AuthContainer user={user} loading={authLoading} />
           </div>
           
           <div className="flex items-center gap-3">
@@ -272,6 +384,24 @@ export default function App() {
         </header>
 
         <section className="space-y-8">
+          {!user ? (
+            <div className="bg-white rounded-[2rem] p-12 text-center border border-slate-100 shadow-xl shadow-slate-200/50">
+              <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <LogIn size={40} />
+              </div>
+              <h2 className="text-2xl font-black text-slate-800 mb-2">Bienvenido al Historial de Inquilinos</h2>
+              <p className="text-slate-500 mb-8 max-w-md mx-auto">
+                Inicia sesión con tu cuenta de Google para gestionar tus cobros, suministros y contratos de forma segura y privada.
+              </p>
+              <button 
+                onClick={() => auth.currentUser ? null : signInWithGoogle()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest transition-all shadow-xl shadow-indigo-100 transform hover:-translate-y-1"
+              >
+                Acceder con Google
+              </button>
+            </div>
+          ) : (
+            <>
           {stats.totalDebt > 0 && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
@@ -439,6 +569,8 @@ export default function App() {
               </motion.div>
             ) : null}
           </AnimatePresence>
+          </>
+          )}
         </section>
       </main>
 
@@ -457,6 +589,7 @@ export default function App() {
       {selectedReceipt && (
         <ReceiptModal 
           payment={selectedReceipt}
+          tenant={tenants.find(t => t.id === selectedReceipt.tenantId)}
           onClose={() => setSelectedReceipt(null)}
         />
       )}

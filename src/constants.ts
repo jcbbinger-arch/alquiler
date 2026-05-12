@@ -7,11 +7,11 @@ export const INITIAL_TENANTS: Tenant[] = [
     phone: '664 00 57 34',
     deposit: 100,
     leaseStartDate: '2021-07-28',
-    emergencyContact: {
+    emergencyContacts: [{
       name: 'Candelaria',
       relationship: 'Madre',
       phone: '637400934'
-    }
+    }]
   }
 ];
 

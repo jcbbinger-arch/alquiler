@@ -83,6 +83,22 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                         <ShieldCheck size={14} />
                         {formatCurrency(tenant.deposit)}
                       </p>
+                      {tenant.depositMonths && (
+                        <p className="text-[10px] text-indigo-100 mt-1 italic">
+                          ({tenant.depositMonths} {tenant.depositMonths === 1 ? 'mes' : 'meses'})
+                        </p>
+                      )}
+                      {tenant.additionalDeposits && tenant.additionalDeposits.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-indigo-200">Entregas Extra:</p>
+                          {tenant.additionalDeposits.map((dep, dIdx) => (
+                            <div key={dIdx} className="flex justify-between items-center text-[10px] text-indigo-50">
+                              <span>{new Date(dep.date).toLocaleDateString('es-ES')}:</span>
+                              <span className="font-bold">+{formatCurrency(dep.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm col-span-2 md:col-span-1">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 mb-1">ID / DNI</p>
@@ -92,25 +108,57 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                 </div>
               </div>
               
-              <div className="p-8">
-                <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
-                  <Users size={18} className="text-indigo-600" />
-                  Contacto de Emergencia
-                </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Nombre</p>
-                    <p className="font-bold text-slate-800">{tenant.emergencyContact.name}</p>
-                    <span className="text-xs text-indigo-600 font-medium px-2 py-0.5 bg-indigo-50 rounded-full mt-2 inline-block">
-                      {tenant.emergencyContact.relationship}
-                    </span>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Teléfono Directo</p>
-                    <p className="font-bold text-slate-800 font-mono">{tenant.emergencyContact.phone}</p>
+              <div className="p-8 space-y-10">
+                {/* Emergency Contacts */}
+                <div>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <Users size={18} className="text-indigo-600" />
+                    Contactos de Emergencia / Familiares
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(tenant.emergencyContacts || [(tenant as any).emergencyContact]).filter(Boolean).map((contact, idx) => (
+                      <div key={idx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 group-hover:border-indigo-100 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <p className="font-bold text-slate-800">{contact.name}</p>
+                          <span className="text-[10px] text-indigo-600 font-black uppercase tracking-widest px-2 py-0.5 bg-indigo-50 rounded-full">
+                            {contact.relationship}
+                          </span>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Teléfono Directo</p>
+                        <p className="font-bold text-slate-800 font-mono text-sm">{contact.phone}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
+
+                {/* Notes Section */}
+                {tenant.notes && tenant.notes.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-black text-amber-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                      <FileText size={18} />
+                      Anotaciones e Incidencias
+                    </h4>
+                    <div className="space-y-4">
+                      {tenant.notes.map((note) => (
+                        <div key={note.id} className="relative pl-6 border-l-2 border-amber-100 py-1">
+                          <div className="absolute top-2 -left-[5px] w-2 h-2 rounded-full bg-amber-400" />
+                          <div className="flex items-center gap-3 mb-1">
+                            <span className="text-[10px] font-black text-amber-500 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
+                              {new Date(note.date).toLocaleDateString('es-ES')}
+                            </span>
+                            {note.category && (
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                {note.category}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed italic">"{note.content}"</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
