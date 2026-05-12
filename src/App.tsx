@@ -52,7 +52,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 
-import { Payment, CalculatedPayment, Tenant, DebtDetail } from './types';
+import { Payment, CalculatedPayment, Tenant, DebtDetail, ManualCharge } from './types';
 import { INITIAL_PAYMENTS, MONTHS, INITIAL_TENANTS } from './constants';
 import { auth, db, signInWithGoogle } from './firebase';
 import { StatsGrid } from './components/StatsGrid';
@@ -61,6 +61,7 @@ import { TenantProfile } from './components/TenantProfile';
 import { TenantFormModal } from './components/TenantFormModal';
 import { PaymentFormModal } from './components/PaymentFormModal';
 import { ReceiptModal } from './components/ReceiptModal';
+import { ManualChargeModal } from './components/ManualChargeModal';
 import { AuthContainer } from './components/AuthContainer';
 import { cn, formatCurrency } from './lib/utils';
 
@@ -111,6 +112,7 @@ export default function App() {
   const [editingTenant, setEditingTenant] = useState<Tenant | undefined>(undefined);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTenantModal, setShowTenantModal] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<CalculatedPayment | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
 
@@ -294,6 +296,18 @@ export default function App() {
     }
   };
 
+  const handleSaveManualCharge = async (tenantId: string, charge: ManualCharge) => {
+    const tenant = tenants.find(t => t.id === tenantId);
+    if (!tenant) return;
+
+    const updatedManualCharges = [charge, ...(tenant.manualCharges || [])];
+    await handleSaveTenant({
+      ...tenant,
+      manualCharges: updatedManualCharges
+    });
+    setShowChargeModal(false);
+  };
+
   const handleDeletePayment = async (id: string) => {
     if (window.confirm('¿Estás seguro de eliminar este registro?')) {
       try {
@@ -383,6 +397,14 @@ export default function App() {
                  {years.map(y => <option key={y} value={y}>{y}</option>)}
                </select>
              </div>
+
+            <button 
+              onClick={() => setShowChargeModal(true)}
+              className="bg-rose-50 text-rose-600 px-5 py-2.5 rounded-xl text-sm font-bold border border-rose-100 hover:bg-rose-100 transition-all flex items-center gap-2"
+            >
+              <Plus size={18} />
+              <span>Añadir Cobro</span>
+            </button>
 
             <button 
               onClick={() => setShowAddModal(true)}
@@ -619,6 +641,14 @@ export default function App() {
             setEditingTenant(undefined);
           }}
           onSave={handleSaveTenant}
+        />
+      )}
+
+      {showChargeModal && (
+        <ManualChargeModal 
+          tenants={tenants}
+          onClose={() => setShowChargeModal(false)}
+          onSave={handleSaveManualCharge}
         />
       )}
     </div>

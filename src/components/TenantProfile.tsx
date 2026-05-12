@@ -261,9 +261,16 @@ export function TenantProfile({ tenants, onAddTenant, onEditTenant }: TenantProf
                               {charge.isPaid ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
                             </button>
                             <div>
-                              <p className={cn("text-xs font-bold", charge.isPaid ? "text-slate-400" : "text-slate-800")}>
-                                {charge.concept}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className={cn("text-xs font-bold", charge.isPaid ? "text-slate-400" : "text-slate-800")}>
+                                  {charge.concept}
+                                </p>
+                                {charge.period && (
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-black uppercase tracking-widest leading-none">
+                                    {charge.period}
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-[10px] uppercase font-black tracking-widest opacity-50">
                                 {new Date(charge.date).toLocaleDateString('es-ES')} • {charge.category}
                               </p>

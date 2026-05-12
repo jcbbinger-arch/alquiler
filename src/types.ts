@@ -59,6 +59,7 @@ export interface ManualCharge {
   isPaid: boolean;
   paymentDate?: string;
   category: 'rotura' | 'atraso' | 'extra' | 'servicio';
+  period?: string;
 }
 
 export interface Tenant {
