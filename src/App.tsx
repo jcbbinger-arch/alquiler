@@ -177,9 +177,11 @@ export default function App() {
       // 1. Add all incurred charges to debt tracking
       const charges = [
         { concept: 'Alquiler', amount: p.rentAmount },
-        { concept: 'Luz', amount: p.electricityAmount },
-        { concept: 'Agua', amount: p.waterAmount },
-        { concept: 'Otros', amount: p.otherExpenses + (p.manualChargesAmount || 0) }
+        { concept: 'Luz', amount: p.electricityAmount, postponed: p.includeElectricity === false },
+        { concept: 'Agua', amount: p.includeWater === false ? 0 : p.waterAmount, postponed: false }, // Rent/Manual charges are base
+        { concept: 'Agua (Pospuesta)', amount: p.includeWater === false ? p.waterAmount : 0, postponed: true },
+        { concept: 'Luz (Pospuesta)', amount: p.includeElectricity === false ? p.electricityAmount : 0, postponed: true },
+        { concept: 'Otros', amount: p.otherExpenses + (p.manualChargesAmount || 0), postponed: false }
       ];
 
       charges.forEach(c => {
@@ -224,7 +226,7 @@ export default function App() {
         netDue: netDue,
         currentSurplus: remainingPayment > 0 ? remainingPayment : 0,
         pendingDebts: allPendingDebts.map(d => ({ 
-            concept: `${d.concept}${p.includeElectricity === false && d.concept === 'Luz' ? ' (Pospuesto)' : ''}${p.includeWater === false && d.concept === 'Agua' ? ' (Pospuesto)' : ''}`, 
+            concept: d.concept, 
             period: d.period, 
             amount: d.amount,
             month: d.month,
