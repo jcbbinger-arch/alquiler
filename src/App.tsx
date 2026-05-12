@@ -175,59 +175,74 @@ export default function App() {
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
 
-      // 1. Add this month's incurred charges to unpaid tracking
-      const monthlyCharges = [
-        { concept: 'Alquiler', amount: p.rentAmount },
-        { concept: 'Luz', amount: p.electricityAmount },
-        { concept: 'Agua', amount: p.waterAmount },
-        { concept: 'Otros', amount: p.otherExpenses + (p.manualChargesAmount || 0) }
-      ];
+      // 1. Add only postponed charges or specific manual charges that are unpaid from this month
+      // Regular rent/invoiced utilities are NOT debt automatically, only if they are not paid
+      const monthlyCharges: (DebtDetail & { date: Date })[] = [];
 
-      monthlyCharges.forEach(c => {
-        if (c.amount > 0) {
-          // If a charge is postponed, label it as such
-          const isPostponed = (c.concept === 'Luz' && p.includeElectricity === false) ||
-                             (c.concept === 'Agua' && p.includeWater === false);
-          
-          activeUnpaidItems.push({
-            concept: isPostponed ? `${c.concept} (Pospuesto)` : c.concept,
-            period: `${p.month} ${p.year}`,
-            amount: c.amount,
-            month: p.month,
-            year: p.year,
-            date: new Date(p.year, MONTHS.indexOf(p.month))
-          });
-        }
-      });
-
-      // 2. Pay off oldest debts first using amountPaid
-      let remainingPayment = p.amountPaid;
-      activeUnpaidItems.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-      for (let debt of activeUnpaidItems) {
-        if (remainingPayment <= 0) break;
-        const toPay = Math.min(debt.amount, remainingPayment);
-        debt.amount -= toPay;
-        remainingPayment -= toPay;
+      // Add postponed utility charges
+      if (p.includeElectricity === false && p.electricityAmount > 0) {
+        monthlyCharges.push({ 
+            concept: 'Luz (Pospuesto)', 
+            period: `${p.month} ${p.year}`, 
+            amount: p.electricityAmount, 
+            month: p.month, year: p.year, 
+            date: new Date(p.year, MONTHS.indexOf(p.month)) 
+        });
       }
 
-      // 3. Keep unpaid debts
-      activeUnpaidItems = activeUnpaidItems.filter(d => d.amount > 0);
+      if (p.includeWater === false && p.waterAmount > 0) {
+        monthlyCharges.push({ 
+            concept: 'Agua (Pospuesto)', 
+            period: `${p.month} ${p.year}`, 
+            amount: p.waterAmount, 
+            month: p.month, year: p.year, 
+            date: new Date(p.year, MONTHS.indexOf(p.month)) 
+        });
+      }
 
-      // 4. Calculate invoice figures
+      // Add unpaid manual charges
+      // ... (existing logic for manual charges is implicit in otherExpenses/manualChargesAmount)
+
+      activeUnpaidItems.push(...monthlyCharges);
+
+      // 2. Pay off oldest debts first using amountPaid
+      // NOTE: This logic assumes amountPaid is meant to pay off debts, 
+      // but amountPaid also covers THIS MONTH's expenses.
+      // THE LOGIC IS INVERTED: amountPaid should pay off:
+      // A) This month's totalToPay
+      // B) Leftover = goes to pay off oldest Debts
+      
       const totalInvoicedThisMonth = p.rentAmount + 
                          (p.includeElectricity !== false ? p.electricityAmount : 0) + 
                          (p.includeWater !== false ? p.waterAmount : 0) + 
                          p.otherExpenses + (p.manualChargesAmount || 0);
+      
+      let surplusPayment = p.amountPaid - totalInvoicedThisMonth;
+
+      // 3. Pay off oldest debts using surplusPayment
+      activeUnpaidItems.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+      if (surplusPayment > 0) {
+          for (let debt of activeUnpaidItems) {
+            if (surplusPayment <= 0) break;
+            const toPay = Math.min(debt.amount, surplusPayment);
+            debt.amount -= toPay;
+            surplusPayment -= toPay;
+          }
+      }
+
+      // 3. Keep unpaid debts (unpaid items remaining)
+      activeUnpaidItems = activeUnpaidItems.filter(d => d.amount > 0.01); // Avoid floating point issues
 
       historicalResult.push({
         ...p,
         totalToPay: totalInvoicedThisMonth,
-        previousBalance: remainingPayment > 0 ? remainingPayment : 0,
+        previousBalance: surplusPayment > 0 ? surplusPayment : 0,
         netDue: activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0),
-        currentSurplus: remainingPayment > 0 ? remainingPayment : 0,
+        currentSurplus: surplusPayment > 0 ? surplusPayment : 0,
         pendingDebts: [...activeUnpaidItems]
       });
+
     }
 
     return historicalResult.reverse();
