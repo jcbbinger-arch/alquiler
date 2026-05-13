@@ -21,10 +21,11 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden print:shadow-none print:m-0"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden print:shadow-none print:m-0 flex flex-col max-h-[90vh]"
+        onClick={e => e.stopPropagation()}
       >
         {/* Header - Not shown in print */}
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 print:hidden">
+        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 print:hidden z-10">
           <h3 className="font-bold text-slate-800">Recibo de Alquiler</h3>
           <div className="flex gap-2">
             <button 
@@ -43,8 +44,8 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
           </div>
         </div>
 
-        {/* Receipt Content */}
-        <div className="p-8 lg:p-10 print:p-0">
+        {/* Receipt Content - Scrollable */}
+        <div className="overflow-y-auto custom-scrollbar flex-1 p-8 lg:p-10 print:p-0 print:overflow-visible">
           <div className="text-center mb-8">
             <h2 className="text-xl font-black text-slate-900 uppercase tracking-widest">Liquidación Mensual</h2>
             <p className="text-slate-400 text-[10px] font-black tracking-widest uppercase mt-1">Registro Interno Administrativo</p>
