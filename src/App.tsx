@@ -171,6 +171,7 @@ export default function App() {
 
     let activeUnpaidItems: (DebtDetail & { date: Date })[] = [];
     const historicalResult: CalculatedPayment[] = [];
+    let carriedSurplus = 0;
 
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
@@ -178,6 +179,9 @@ export default function App() {
       // 1. Separate this month's charges into DUE NOW and POSTPONED
       const currentDueNow: (DebtDetail & { date: Date })[] = [];
       const currentPostponed: (DebtDetail & { date: Date })[] = [];
+
+      // Save current status for receipt display before applying payments
+      const surplusBeingApplied = carriedSurplus;
 
       // Alquiler
       currentDueNow.push({
@@ -248,14 +252,17 @@ export default function App() {
         return getPriority(a.concept) - getPriority(b.concept);
       });
 
-      // 3. Apply payment
-      let remainingPayment = p.amountPaid;
+      // 3. Apply payment (current month payment + carried surplus)
+      let remainingPayment = p.amountPaid + carriedSurplus;
       for (let item of payableQueue) {
         if (remainingPayment <= 0) break;
         const toPay = Math.min(item.amount, remainingPayment);
         item.amount -= toPay;
         remainingPayment -= toPay;
       }
+
+      // Update carried surplus for next month
+      carriedSurplus = remainingPayment > 0 ? remainingPayment : 0;
 
       // 4. New active unpaid = remaining in payableQueue + current postponed items
       activeUnpaidItems = [
@@ -286,9 +293,9 @@ export default function App() {
       historicalResult.push({
         ...p,
         totalToPay: totalInvoicedThisMonth,
-        previousBalance: remainingPayment > 0 ? remainingPayment : 0, 
+        previousBalance: surplusBeingApplied, 
         netDue: activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0),
-        currentSurplus: remainingPayment > 0 ? remainingPayment : 0,
+        currentSurplus: carriedSurplus,
         pendingDebts: displayPending
       });
 
