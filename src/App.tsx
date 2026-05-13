@@ -265,10 +265,12 @@ export default function App() {
         return getPriority(a.concept) - getPriority(b.concept);
       });
 
-      // Calculate total exigible BEFORE applying anything
-      // It's everything in the queue + anything postponed this month
-      const totalExigible = payableQueue.reduce((sum, d) => sum + d.amount, 0) + 
-                             currentPostponed.reduce((sum, d) => sum + d.amount, 0);
+      // Calculate gross debt BEFORE applying anything
+      const grossDebt = payableQueue.reduce((sum, d) => sum + d.amount, 0) + 
+                         currentPostponed.reduce((sum, d) => sum + d.amount, 0);
+
+      // Total Exigible is Net: Gross Debt - Previous Surplus
+      const netTotalExigible = Math.max(0, grossDebt - carriedSurplus);
 
       // Save for display BEFORE reduction
       const displayPendingBeforeReduction = [
@@ -279,17 +281,25 @@ export default function App() {
         originalAmount: d.amount
       }));
 
-      // 3. Apply payment (current month payment + carried surplus)
-      let remainingPayment = p.amountPaid + carriedSurplus;
-      for (let item of payableQueue) {
-        if (remainingPayment <= 0) break;
-        const toPay = Math.min(item.amount, remainingPayment);
-        item.amount -= toPay;
-        remainingPayment -= toPay;
+      // 3. Apply payment logic:
+      // If the tenant makes a payment (p.amountPaid > 0), we use it PLUS any existing surplus 
+      // to settle the oldest debts in the queue.
+      // If p.amountPaid is 0, we DON'T settle items yet, we just let both debt and surplus carry over.
+      // This keeps the gross debt and credit visible in the receipt until a payment event occurs.
+      if (p.amountPaid > 0) {
+        let moneyToApply = p.amountPaid + carriedSurplus;
+        for (let item of payableQueue) {
+          if (moneyToApply <= 0) break;
+          const toPay = Math.min(item.amount, moneyToApply);
+          item.amount -= toPay;
+          moneyToApply -= toPay;
+        }
+        carriedSurplus = moneyToApply;
+      } else {
+        // No payment made. Surplus stays as is, items stay unpaid.
+        // Note: We don't reduce items with surplus here to satisfy user's request
+        // of seeing the remanente carry over until a payment compensantes it.
       }
-
-      // Update carried surplus for next month
-      carriedSurplus = remainingPayment > 0 ? remainingPayment : 0;
 
       // 4. New active unpaid = remaining in payableQueue + current postponed items
       activeUnpaidItems = [
@@ -321,11 +331,11 @@ export default function App() {
         ...p,
         totalToPay: totalInvoicedThisMonth,
         previousBalance: surplusBeingApplied, 
-        netDue: activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0),
+        netDue: Math.max(0, activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0) - carriedSurplus),
         currentSurplus: carriedSurplus,
         previousDebt: previousDebt,
         pendingDebts: displayPending as any,
-        totalExigible: totalExigible
+        totalExigible: netTotalExigible
       });
 
     }

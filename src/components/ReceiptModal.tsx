@@ -27,9 +27,9 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
     const message = `*LIQUIDACIÓN ALQUILER ACCUMULATIVA*\n` +
       `📅 *Periodo:* ${payment.month} ${payment.year}\n` +
       `👤 *Inquilino:* ${tenant?.name || 'Inquilino'}\n\n` +
-      `*1. ESTADO DE CUENTA:*\n` +
+      `*1. ESTADO DE CUENTA (FLUJO):*\n` +
       `🏠 Cargos del Mes: ${formatCurrency(payment.totalToPay)}\n` +
-      (payment.previousDebt > 0 ? `⚠️ Deuda Acumulada Anterior: ${formatCurrency(payment.previousDebt)}\n` : '') +
+      (payment.previousDebt > 0 ? `⚠️ Deudas Atrasadas: ${formatCurrency(payment.previousDebt)}\n` : '') +
       (payment.previousBalance > 0 ? `✨ Saldo a Favor Anterior: -${formatCurrency(payment.previousBalance)}\n` : '') +
       `--------------------------\n` +
       `📑 *TOTAL EXIGIBLE: ${formatCurrency(payment.totalExigible || 0)}*\n` +
@@ -232,30 +232,40 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                 <div className="flex justify-between items-center text-slate-600 text-[11px] font-bold uppercase tracking-tight">
                   <span className="flex items-center gap-1.5 font-black text-slate-800">
                     <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                    Cargos de {payment.month} {payment.year}
+                    [+] Cargos de {payment.month} {payment.year}
                   </span>
                   <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-100">{formatCurrency(payment.totalToPay)}</span>
                 </div>
 
-                {/* 2. Deuda Anterior */}
-                {(payment.previousDebt > 0 || payment.previousBalance > 0) && (
-                  <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-tight">
-                    <span className="flex items-center gap-1.5 text-rose-600 font-black">
+                {/* 2. Deuda Previa */}
+                {payment.previousDebt > 0 && (
+                  <div className="flex justify-between items-center text-rose-600 text-[11px] font-bold uppercase tracking-tight">
+                    <span className="flex items-center gap-1.5 font-black">
                       <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                      Deuda Acumulada Previa
+                      [+] Deudas Atrasadas
                     </span>
-                    <span className={cn(
-                      "font-mono px-2 py-0.5 rounded border",
-                      payment.previousDebt > 0 ? "text-rose-600 bg-rose-50 border-rose-100" : "text-emerald-600 bg-emerald-50 border-emerald-100"
-                    )}>
-                      {payment.previousDebt > 0 ? formatCurrency(payment.previousDebt) : (payment.previousBalance > 0 ? `-${formatCurrency(payment.previousBalance)}` : '0,00 €')}
+                    <span className="font-mono bg-rose-50 px-2 py-0.5 rounded border border-rose-100">
+                      {formatCurrency(payment.previousDebt)}
                     </span>
                   </div>
                 )}
 
-                {/* 3. Total Exigible */}
+                {/* 3. Saldo a Favor */}
+                {payment.previousBalance > 0 && (
+                  <div className="flex justify-between items-center text-emerald-600 text-[11px] font-bold uppercase tracking-tight">
+                    <span className="flex items-center gap-1.5 font-black">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      [-] Saldo Anterior a favor
+                    </span>
+                    <span className="font-mono bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                      -{formatCurrency(payment.previousBalance)}
+                    </span>
+                  </div>
+                )}
+
+                {/* 4. Total Exigible */}
                 <div className="flex justify-between items-center text-slate-900 text-[12px] font-black uppercase tracking-widest pt-2.5 border-t border-slate-200 group-hover:border-indigo-200 transition-colors">
-                  <span>TOTAL EXIGIBLE</span>
+                  <span>[=] TOTAL EXIGIBLE</span>
                   <div className="flex flex-col items-end">
                     <span className="font-mono bg-slate-200 text-slate-900 px-3 py-1 rounded-lg text-sm shadow-inner">
                       {formatCurrency(payment.totalExigible || 0)}
@@ -263,11 +273,11 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                   </div>
                 </div>
 
-                {/* 4. Pago / Entrega */}
+                {/* 5. Pago / Entrega */}
                 <div className="flex justify-between items-center text-indigo-600 text-[11px] font-black uppercase tracking-widest bg-indigo-50/50 -mx-4 px-4 py-2 border-y border-indigo-100/50">
                   <span className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-                    Entrega Registrada
+                    [-] Entrega Registrada
                   </span>
                   <span className="font-mono font-black">-{formatCurrency(payment.amountPaid)}</span>
                 </div>
