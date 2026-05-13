@@ -34,24 +34,24 @@ export function YearlyStats({ payments }: YearlyStatsProps) {
 
   const yearlyData = useMemo(() => {
     const sortedYears = [...years].sort((a, b) => a - b);
+    let totalLuz = 0;
+    let totalAgua = 0;
     
-    // Global averages for the whole history
-    const totalElec = payments.reduce((acc, p) => acc + p.electricityAmount, 0);
-    const totalWater = payments.reduce((acc, p) => acc + p.waterAmount, 0);
-    const avgElec = totalElec / (sortedYears.length || 1);
-    const avgWater = totalWater / (sortedYears.length || 1);
-
-    return sortedYears.map(year => {
+    return sortedYears.map((year, index) => {
       const yearPayments = payments.filter(p => p.year === year);
-      const totalElectricity = yearPayments.reduce((acc, p) => acc + p.electricityAmount, 0);
-      const totalWater = yearPayments.reduce((acc, p) => acc + p.waterAmount, 0);
+      const yearLuz = yearPayments.reduce((acc, p) => acc + p.electricityAmount, 0);
+      const yearAgua = yearPayments.reduce((acc, p) => acc + p.waterAmount, 0);
       
+      totalLuz += yearLuz;
+      totalAgua += yearAgua;
+      const count = index + 1;
+
       return {
         name: year.toString(),
-        Luz: totalElectricity,
-        Agua: totalWater,
-        avgLuz: avgElec,
-        avgAgua: avgWater
+        Luz: yearLuz,
+        Agua: yearAgua,
+        avgLuz: totalLuz / count,
+        avgAgua: totalAgua / count
       };
     });
   }, [payments, years]);
@@ -60,23 +60,30 @@ export function YearlyStats({ payments }: YearlyStatsProps) {
     const yearPayments = payments.filter(p => p.year === selectedYear);
     const sortedMonths = MONTHS.map(m => m);
     
-    // Average for THIS year
-    const counts = yearPayments.filter(p => p.electricityAmount > 0 || p.waterAmount > 0).length || 1;
-    const yearAvgElec = yearPayments.reduce((acc, p) => acc + p.electricityAmount, 0) / counts;
-    const yearAvgWater = yearPayments.reduce((acc, p) => acc + p.waterAmount, 0) / counts;
+    let totalLuz = 0;
+    let totalAgua = 0;
+    let monthsWithData = 0;
 
     return sortedMonths.map((month) => {
       const p = yearPayments.find(pay => pay.month === month);
+      const luz = p?.electricityAmount || 0;
+      const agua = p?.waterAmount || 0;
+      
+      if (luz > 0 || agua > 0) {
+        totalLuz += luz;
+        totalAgua += agua;
+        monthsWithData++;
+      }
+
       return {
         name: month.charAt(0).toUpperCase() + month.slice(1, 3),
         longName: month,
-        Luz: p?.electricityAmount || 0,
-        Agua: p?.waterAmount || 0,
-        avgLuz: yearAvgElec,
-        avgAgua: yearAvgWater
+        Luz: luz,
+        Agua: agua,
+        avgLuz: monthsWithData > 0 ? totalLuz / monthsWithData : 0,
+        avgAgua: monthsWithData > 0 ? totalAgua / monthsWithData : 0
       };
     }).filter(d => {
-      // Show if it has data or if it's before the last month that has data this year
       const lastMonthIdx = Math.max(...yearPayments.map(p => MONTHS.indexOf(p.month)), -1);
       return MONTHS.indexOf(d.longName) <= lastMonthIdx;
     });
@@ -237,6 +244,16 @@ export function YearlyStats({ payments }: YearlyStatsProps) {
                 strokeWidth={4} 
                 dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
+                name="Luz"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="avgLuz" 
+                stroke="#F59E0B" 
+                strokeWidth={2} 
+                strokeDasharray="5 5"
+                dot={false}
+                name="Media Luz Hist."
               />
               <Line 
                 type="monotone" 
@@ -245,6 +262,16 @@ export function YearlyStats({ payments }: YearlyStatsProps) {
                 strokeWidth={4} 
                 dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
                 activeDot={{ r: 6, strokeWidth: 0 }}
+                name="Agua"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="avgAgua" 
+                stroke="#3B82F6" 
+                strokeWidth={2} 
+                strokeDasharray="5 5"
+                dot={false}
+                name="Media Agua Hist."
               />
             </LineChart>
           </ResponsiveContainer>

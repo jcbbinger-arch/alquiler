@@ -29,11 +29,11 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
       `👤 *Inquilino:* ${tenant?.name || 'Inquilino'}\n\n` +
       `*DETALLE DEL MES:*\n` +
       `🏠 Alquiler: ${formatCurrency(payment.rentAmount)}\n` +
-      `⚡ Luz: ${payment.includeElectricity === false ? 'Aplazado' : formatCurrency(payment.electricityAmount)}\n` +
-      `💧 Agua: ${payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount)}\n` +
+      `⚡ Luz: ${payment.electricityAmount === 0 && payment.includeElectricity !== false ? 'Sin factura (Pendiente)' : (payment.includeElectricity === false ? 'Aplazado' : formatCurrency(payment.electricityAmount))}\n` +
+      `💧 Agua: ${payment.waterAmount === 0 && payment.includeWater !== false ? 'Sin factura (Pendiente)' : (payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount))}\n` +
       (payment.otherExpenses > 0 ? `➕ Otros: ${formatCurrency(payment.otherExpenses)}\n` : '') +
       `💰 *Total Mes:* ${formatCurrency(payment.totalToPay)}\n\n` +
-      (payment.previousBalance > 0 ? `✨ *Sobrante anterior:* ${formatCurrency(payment.previousBalance)}\n` : '') +
+      (payment.previousBalance > 0 ? `✨ *Sobrante anterior:* ${formatCurrency(payment.previousBalance)} (Aplicado)\n` : '') +
       (pendingText ? `*DEUDAS PENDIENTES:*\n${pendingText}\n\n` : '') +
       `📥 *Entrega registrada:* ${formatCurrency(payment.amountPaid)}\n` +
       `❗ *SALDO FINAL:* ${formatCurrency(payment.netDue)}`;
@@ -115,17 +115,27 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                     <span className="text-slate-500">Alquiler</span>
                     <span className="font-mono font-bold">{formatCurrency(payment.rentAmount)}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center text-slate-600">
                     <span className="text-slate-500">Luz</span>
-                    <span className={cn("font-mono", payment.includeElectricity === false ? "text-slate-300 italic" : "font-bold text-slate-700")}>
-                      {payment.includeElectricity === false ? 'Aplazado' : formatCurrency(payment.electricityAmount)}
-                    </span>
+                    <div className="text-right">
+                      <span className={cn("font-mono", (payment.includeElectricity === false || payment.electricityAmount === 0) ? "text-slate-300 italic" : "font-bold text-slate-700")}>
+                        {payment.includeElectricity === false ? 'Aplazado' : formatCurrency(payment.electricityAmount)}
+                      </span>
+                      {payment.electricityAmount === 0 && payment.includeElectricity !== false && (
+                        <p className="text-[7px] text-slate-300 italic leading-tight">Sin factura aún</p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center text-slate-600">
                     <span className="text-slate-500">Agua</span>
-                    <span className={cn("font-mono", payment.includeWater === false ? "text-slate-300 italic" : "font-bold text-slate-700")}>
-                      {payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount)}
-                    </span>
+                    <div className="text-right">
+                      <span className={cn("font-mono", (payment.includeWater === false || payment.waterAmount === 0) ? "text-slate-300 italic" : "font-bold text-slate-700")}>
+                        {payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount)}
+                      </span>
+                      {payment.waterAmount === 0 && payment.includeWater !== false && (
+                        <p className="text-[7px] text-slate-300 italic leading-tight">Pendiente (Bimestral)</p>
+                      )}
+                    </div>
                   </div>
                   <div className="pt-1.5 mt-1 border-t border-slate-50 flex justify-between font-black text-indigo-600">
                     <span className="uppercase">Subtotal</span>
