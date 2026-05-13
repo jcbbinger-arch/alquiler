@@ -236,17 +236,27 @@ export default function App() {
       }
 
       // 2. Prepare the queue of what can be paid with p.amountPaid
-      // Priority: Oldest first, and within same date: Postponed > Alquiler > Others
+      // Priority 1: Oldest months first (handled by sorting by date)
+      // Priority 2 (within same month): Utilities (Luz/Agua) > Rent > Others
       const getPriority = (concept: string) => {
-        if (concept.includes('Pospuesto')) return 0;
-        if (concept.includes('Alquiler')) return 1;
-        if (concept.includes('Luz')) return 2;
-        if (concept.includes('Agua')) return 3;
+        const c = concept.toLowerCase();
+        if (c.includes('luz')) return 1;
+        if (c.includes('agua')) return 2;
+        if (c.includes('alquiler')) return 3;
         return 4;
       };
 
       // The payment covers past debt AND this month's due now charges
       const payableQueue = [...activeUnpaidItems, ...currentDueNow];
+      
+      // Before sorting, clean up concepts for historical items 
+      // (Remove "(Pospuesto)" label for items being paid now)
+      payableQueue.forEach(item => {
+        if (item.concept.includes('(Pospuesto)')) {
+          item.concept = item.concept.replace(' (Pospuesto)', '');
+        }
+      });
+
       payableQueue.sort((a, b) => {
         const dateDiff = a.date.getTime() - b.date.getTime();
         if (dateDiff !== 0) return dateDiff;
@@ -254,6 +264,7 @@ export default function App() {
       });
 
       // Calculate total exigible BEFORE applying anything
+      // It's everything in the queue + anything postponed this month
       const totalExigible = payableQueue.reduce((sum, d) => sum + d.amount, 0) + 
                              currentPostponed.reduce((sum, d) => sum + d.amount, 0);
 
