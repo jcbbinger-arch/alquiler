@@ -20,25 +20,23 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
 
   const copyToWhatsApp = () => {
     const pendingText = payment.pendingDebts
-      .filter(d => !d.isPaid)
+      .filter(d => d.amount > 0.01)
       .map(d => `• ${d.concept} (${d.period}): ${formatCurrency(d.amount)}`)
       .join('\n');
 
     const message = `*LIQUIDACIÓN ALQUILER ACCUMULATIVA*\n` +
       `📅 *Periodo:* ${payment.month} ${payment.year}\n` +
       `👤 *Inquilino:* ${tenant?.name || 'Inquilino'}\n\n` +
-      `*1. CARGOS DEL MES:*\n` +
-      `🏠 Alquiler: ${formatCurrency(payment.rentAmount)}\n` +
-      `⚡ Luz: ${payment.electricityAmount === 0 && payment.includeElectricity !== false ? 'Sin factura (Pendiente)' : (payment.includeElectricity === false ? 'Aplazado' : formatCurrency(payment.electricityAmount))}\n` +
-      `💧 Agua: ${payment.waterAmount === 0 && payment.includeWater !== false ? 'Sin factura (Pendiente)' : (payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount))}\n` +
-      (payment.otherExpenses > 0 ? `➕ Otros: ${formatCurrency(payment.otherExpenses)}\n` : '') +
-      `💰 Subtotal Mes: ${formatCurrency(payment.totalToPay)}\n\n` +
-      (pendingText ? `*2. DEUDAS ACUMULADAS:*\n${pendingText}\n\n` : '') +
-      `*3. ESTADO DE CUENTA:*\n` +
-      `📑 TOTAL EXIGIBLE: ${formatCurrency(payment.totalExigible || (payment.netDue + payment.amountPaid + payment.previousBalance))}\n` +
-      (payment.previousBalance > 0 ? `✨ Saldo a favor (Sobrante anterior): -${formatCurrency(payment.previousBalance)}\n` : '') +
-      `📥 ENTREGA REGISTRADA: -${formatCurrency(payment.amountPaid)}\n` +
-      `❗ *BALANCE FINAL: ${payment.netDue > 0 ? formatCurrency(payment.netDue) : (payment.currentSurplus > 0 ? '-' + formatCurrency(payment.currentSurplus) + ' (A su favor)' : '0,00 €')}*`;
+      `*1. ESTADO DE CUENTA:*\n` +
+      `🏠 Cargos del Mes: ${formatCurrency(payment.totalToPay)}\n` +
+      (payment.previousDebt > 0 ? `⚠️ Deuda Acumulada Anterior: ${formatCurrency(payment.previousDebt)}\n` : '') +
+      (payment.previousBalance > 0 ? `✨ Saldo a Favor Anterior: -${formatCurrency(payment.previousBalance)}\n` : '') +
+      `--------------------------\n` +
+      `📑 *TOTAL EXIGIBLE: ${formatCurrency(payment.totalExigible || 0)}*\n` +
+      `📥 *Entrega Registrada: -${formatCurrency(payment.amountPaid)}*\n` +
+      `--------------------------\n` +
+      `❗ *${payment.netDue > 0 ? 'BALANCE PENDIENTE' : 'SALDO A FAVOR'}: ${payment.netDue > 0 ? formatCurrency(payment.netDue) : formatCurrency(payment.currentSurplus)}*\n\n` +
+      (pendingText ? `*DETALLE DE PENDIENTES:*\n${pendingText}\n` : '');
 
     navigator.clipboard.writeText(message);
     setCopied(true);
@@ -229,55 +227,81 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
             </div>
 
             <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-              <div className="p-4 space-y-2.5 text-right">
-                <div className="flex justify-between items-center text-slate-400 text-[10px] font-black uppercase tracking-widest border-b border-slate-100 pb-1.5 mb-1.5">
-                  <span>Flujo de Liquidación</span>
-                  <span>Importe</span>
+              <div className="p-4 space-y-3">
+                {/* 1. Mes Actual */}
+                <div className="flex justify-between items-center text-slate-600 text-[11px] font-bold uppercase tracking-tight">
+                  <span className="flex items-center gap-1.5 font-black text-slate-800">
+                    <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    Cargos de {payment.month} {payment.year}
+                  </span>
+                  <span className="font-mono bg-white px-2 py-0.5 rounded border border-slate-100">{formatCurrency(payment.totalToPay)}</span>
                 </div>
 
-                <div className="flex justify-between items-center text-slate-600 text-[10px] font-bold uppercase tracking-tight">
-                  <span>[+] Cargos Mes Actual</span>
-                  <span className="font-mono">{formatCurrency(payment.totalToPay)}</span>
-                </div>
-
-                {payment.totalExigible - payment.totalToPay > 0 && (
-                  <div className="flex justify-between items-center text-rose-500 text-[10px] font-bold uppercase tracking-tight">
-                    <span>[+] Deudas Meses Anteriores</span>
-                    <span className="font-mono">{formatCurrency(payment.totalExigible - payment.totalToPay)}</span>
+                {/* 2. Deuda Anterior */}
+                {(payment.previousDebt > 0 || payment.previousBalance > 0) && (
+                  <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-tight">
+                    <span className="flex items-center gap-1.5 text-rose-600 font-black">
+                      <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                      Deuda Acumulada Previa
+                    </span>
+                    <span className={cn(
+                      "font-mono px-2 py-0.5 rounded border",
+                      payment.previousDebt > 0 ? "text-rose-600 bg-rose-50 border-rose-100" : "text-emerald-600 bg-emerald-50 border-emerald-100"
+                    )}>
+                      {payment.previousDebt > 0 ? formatCurrency(payment.previousDebt) : (payment.previousBalance > 0 ? `-${formatCurrency(payment.previousBalance)}` : '0,00 €')}
+                    </span>
                   </div>
                 )}
 
-                <div className="flex justify-between items-center text-slate-900 text-[11px] font-black uppercase tracking-widest pt-1 border-t border-slate-200">
-                  <span>[=] TOTAL EXIGIBLE</span>
-                  <span className="font-mono bg-slate-100 px-2 py-0.5 rounded">{formatCurrency(payment.totalExigible || 0)}</span>
+                {/* 3. Total Exigible */}
+                <div className="flex justify-between items-center text-slate-900 text-[12px] font-black uppercase tracking-widest pt-2.5 border-t border-slate-200 group-hover:border-indigo-200 transition-colors">
+                  <span>TOTAL EXIGIBLE</span>
+                  <div className="flex flex-col items-end">
+                    <span className="font-mono bg-slate-200 text-slate-900 px-3 py-1 rounded-lg text-sm shadow-inner">
+                      {formatCurrency(payment.totalExigible || 0)}
+                    </span>
+                  </div>
                 </div>
-                
-                {payment.previousBalance > 0 && (
-                  <div className="flex justify-between items-center text-emerald-600 text-[10px] font-bold uppercase tracking-tight">
-                    <span>[-] Saldo Anterior a favor</span>
-                    <span className="font-mono">-{formatCurrency(payment.previousBalance)}</span>
+
+                {/* 4. Pago / Entrega */}
+                <div className="flex justify-between items-center text-indigo-600 text-[11px] font-black uppercase tracking-widest bg-indigo-50/50 -mx-4 px-4 py-2 border-y border-indigo-100/50">
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                    Entrega Registrada
+                  </span>
+                  <span className="font-mono font-black">-{formatCurrency(payment.amountPaid)}</span>
+                </div>
+
+                {/* Desglose de lo liquidado en este recibo */}
+                {payment.pendingDebts.some(d => d.isPaid && (d.month !== payment.month || d.year !== payment.year)) && (
+                  <div className="pt-1">
+                    <p className="text-[7px] text-center uppercase font-black tracking-widest text-emerald-500 mb-1">Liquidado en este recibo</p>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {payment.pendingDebts
+                        .filter(d => d.isPaid && (d.month !== payment.month || d.year !== payment.year))
+                        .map((d, i) => (
+                          <span key={i} className="text-[7px] bg-emerald-50 text-emerald-600 px-1 py-0.5 rounded font-bold border border-emerald-100">
+                            ✓ {d.concept} ({d.period})
+                          </span>
+                        ))}
+                    </div>
                   </div>
                 )}
-                
-                <div className="flex justify-between items-center text-indigo-600 text-[10px] font-black uppercase tracking-widest bg-indigo-50/50 -mx-4 px-4 py-1.5">
-                  <span className="flex items-center gap-1 italic">[-] Entrega Registrada</span>
-                  <span className="font-mono">-{formatCurrency(payment.amountPaid)}</span>
-                </div>
               </div>
               
               <div className={cn(
-                "p-4 flex justify-between items-center border-t border-black/5",
+                "p-5 flex justify-between items-center border-t border-black/5 transition-all duration-500",
                 payment.netDue > 0 ? "bg-slate-900 text-white" : "bg-emerald-600 text-white"
               )}>
                 <div className="flex flex-col">
-                  <span className="font-black text-[12px] uppercase tracking-widest">
+                  <span className="font-black text-[14px] uppercase tracking-widest leading-none mb-1">
                     {payment.netDue > 0 ? 'BALANCE PENDIENTE' : 'SALDO A FAVOR'}
                   </span>
-                  {payment.netDue <= 0 && payment.currentSurplus > 0 && (
-                    <span className="text-[7px] uppercase font-bold text-white/70 tracking-wider">Acumulado para el futuro</span>
-                  )}
+                  <span className="text-[8px] uppercase font-bold text-white/70 tracking-[0.2em] animate-pulse">
+                    Estado Actualizado
+                  </span>
                 </div>
-                <span className="text-2xl font-black font-mono">
+                <span className="text-3xl font-black font-mono tracking-tighter">
                   {payment.netDue > 0 ? formatCurrency(payment.netDue) : formatCurrency(payment.currentSurplus)}
                 </span>
               </div>

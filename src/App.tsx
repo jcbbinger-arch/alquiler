@@ -238,6 +238,8 @@ export default function App() {
       // 2. Prepare the queue of what can be paid with p.amountPaid
       // Priority 1: Oldest months first (handled by sorting by date)
       // Priority 2 (within same month): Utilities (Luz/Agua) > Rent > Others
+      const previousDebt = activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0);
+
       const getPriority = (concept: string) => {
         const c = concept.toLowerCase();
         if (c.includes('luz')) return 1;
@@ -321,6 +323,7 @@ export default function App() {
         previousBalance: surplusBeingApplied, 
         netDue: activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0),
         currentSurplus: carriedSurplus,
+        previousDebt: previousDebt,
         pendingDebts: displayPending as any,
         totalExigible: totalExigible
       });

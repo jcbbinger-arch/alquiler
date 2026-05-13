@@ -100,6 +100,7 @@ export interface CalculatedPayment extends Payment {
   previousBalance: number; // Credit carried from previous month (positive number means credit)
   netDue: number; // totalToPay - previousBalance
   currentSurplus: number; // amountPaid - netDue (if positive)
+  previousDebt: number; // Sum of unpaid items from previous months
   pendingDebts: DebtDetail[]; // List of unpaid items from previous months
   totalExigible?: number; // Total due before applying previous balance and current payment
 }
