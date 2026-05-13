@@ -175,58 +175,113 @@ export default function App() {
     for (let i = 0; i < sorted.length; i++) {
       const p = sorted[i];
 
-      // 1. Add all charges for this month to the queue
-      const monthlyCharges = [
-        { concept: 'Alquiler', amount: p.rentAmount },
-        { concept: 'Luz', amount: p.includeElectricity !== false ? p.electricityAmount : 0 },
-        { concept: 'Agua', amount: p.includeWater !== false ? p.waterAmount : 0 },
-        { concept: 'Luz (Pospuesto)', amount: p.includeElectricity === false ? p.electricityAmount : 0 },
-        { concept: 'Agua (Pospuesto)', amount: p.includeWater === false ? p.waterAmount : 0 },
-        { concept: 'Otros', amount: p.otherExpenses + (p.manualChargesAmount || 0) }
-      ];
+      // 1. Separate this month's charges into DUE NOW and POSTPONED
+      const currentDueNow: (DebtDetail & { date: Date })[] = [];
+      const currentPostponed: (DebtDetail & { date: Date })[] = [];
 
-      monthlyCharges.forEach(c => {
-        if (c.amount > 0) {
-          activeUnpaidItems.push({
-            concept: c.concept,
-            period: `${p.month} ${p.year}`,
-            amount: c.amount,
-            month: p.month,
-            year: p.year,
-            date: new Date(p.year, MONTHS.indexOf(p.month))
-          });
-        }
+      // Alquiler
+      currentDueNow.push({
+        concept: 'Alquiler',
+        period: `${p.month} ${p.year}`,
+        amount: p.rentAmount,
+        month: p.month,
+        year: p.year,
+        date: new Date(p.year, MONTHS.indexOf(p.month))
       });
 
-      // Sort: Oldest date first, then concept priority
-      const getConceptPriority = (concept: string) => {
+      // Luz
+      if (p.electricityAmount > 0) {
+        const item = {
+          concept: p.includeElectricity === false ? 'Luz (Pospuesto)' : 'Luz',
+          period: `${p.month} ${p.year}`,
+          amount: p.electricityAmount,
+          month: p.month,
+          year: p.year,
+          date: new Date(p.year, MONTHS.indexOf(p.month))
+        };
+        if (p.includeElectricity === false) currentPostponed.push(item);
+        else currentDueNow.push(item);
+      }
+
+      // Agua
+      if (p.waterAmount > 0) {
+        const item = {
+          concept: p.includeWater === false ? 'Agua (Pospuesto)' : 'Agua',
+          period: `${p.month} ${p.year}`,
+          amount: p.waterAmount,
+          month: p.month,
+          year: p.year,
+          date: new Date(p.year, MONTHS.indexOf(p.month))
+        };
+        if (p.includeWater === false) currentPostponed.push(item);
+        else currentDueNow.push(item);
+      }
+
+      // Otros
+      const otherTotal = p.otherExpenses + (p.manualChargesAmount || 0);
+      if (otherTotal > 0) {
+        currentDueNow.push({
+          concept: 'Otros',
+          period: `${p.month} ${p.year}`,
+          amount: otherTotal,
+          month: p.month,
+          year: p.year,
+          date: new Date(p.year, MONTHS.indexOf(p.month))
+        });
+      }
+
+      // 2. Prepare the queue of what can be paid with p.amountPaid
+      // Priority: Oldest first, and within same date: Postponed > Alquiler > Others
+      const getPriority = (concept: string) => {
+        if (concept.includes('Pospuesto')) return 0;
         if (concept.includes('Alquiler')) return 1;
         if (concept.includes('Luz')) return 2;
         if (concept.includes('Agua')) return 3;
         return 4;
       };
 
-      activeUnpaidItems.sort((a, b) => {
+      // The payment covers past debt AND this month's due now charges
+      const payableQueue = [...activeUnpaidItems, ...currentDueNow];
+      payableQueue.sort((a, b) => {
         const dateDiff = a.date.getTime() - b.date.getTime();
         if (dateDiff !== 0) return dateDiff;
-        return getConceptPriority(a.concept) - getConceptPriority(b.concept);
+        return getPriority(a.concept) - getPriority(b.concept);
       });
 
-      // 2. Pay off queue using amountPaid
+      // 3. Apply payment
       let remainingPayment = p.amountPaid;
-
-      for (let debt of activeUnpaidItems) {
+      for (let item of payableQueue) {
         if (remainingPayment <= 0) break;
-        const toPay = Math.min(debt.amount, remainingPayment);
-        debt.amount -= toPay;
+        const toPay = Math.min(item.amount, remainingPayment);
+        item.amount -= toPay;
         remainingPayment -= toPay;
       }
 
-      // 3. Keep only unpaid debts (floating point safe)
-      activeUnpaidItems = activeUnpaidItems.filter(d => d.amount > 0.01);
+      // 4. New active unpaid = remaining in payableQueue + current postponed items
+      activeUnpaidItems = [
+        ...payableQueue.filter(d => d.amount > 0.01),
+        ...currentPostponed
+      ];
 
-      // 4. Calculate invoice figures
-      const totalInvoicedThisMonth = p.rentAmount + p.electricityAmount + p.waterAmount + p.otherExpenses + (p.manualChargesAmount || 0);
+      // 5. Build pendingDebts for display (including what was paid in this batch for the receipt)
+      // Only include items that are relevant to this payment or still pending
+      const displayPending = [
+        ...payableQueue,
+        ...currentPostponed
+      ].map(d => ({
+        concept: d.concept,
+        period: d.period,
+        amount: d.amount,
+        month: d.month,
+        year: d.year,
+        isPaid: d.amount <= 0.01
+      }));
+
+      // 6. Calculate total invoiced for this month
+      const totalInvoicedThisMonth = p.rentAmount + 
+                                    (p.includeElectricity !== false ? p.electricityAmount : 0) + 
+                                    (p.includeWater !== false ? p.waterAmount : 0) + 
+                                    otherTotal;
 
       historicalResult.push({
         ...p,
@@ -234,7 +289,7 @@ export default function App() {
         previousBalance: remainingPayment > 0 ? remainingPayment : 0, 
         netDue: activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0),
         currentSurplus: remainingPayment > 0 ? remainingPayment : 0,
-        pendingDebts: [...activeUnpaidItems]
+        pendingDebts: displayPending
       });
 
     }

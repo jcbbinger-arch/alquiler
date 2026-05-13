@@ -1,6 +1,6 @@
 import React from 'react';
 import { CalculatedPayment, Tenant } from '../types';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, cn } from '../lib/utils';
 import { MONTHS } from '../constants';
 import { Printer, X, Download, Zap, Droplets } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -63,55 +63,76 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
             </div>
           </div>
 
-          <div className="space-y-3 mb-8">
-            <div className="flex justify-between items-center text-slate-700 text-sm">
-              <span className="font-medium">Alquiler mensual base</span>
-              <span className="font-mono font-bold text-slate-900">{formatCurrency(payment.rentAmount)}</span>
-            </div>
-
-            {/* Detailed Suministros */}
-            <div className="grid grid-cols-1 gap-2 py-2">
-              <div className="flex justify-between items-center text-slate-600 text-xs">
-                <span className="flex items-center gap-2"><Zap size={12} className="text-amber-500" /> Suministro Luz</span>
-                <span className="font-mono">{payment.includeElectricity !== false ? formatCurrency(payment.electricityAmount) : 'Aplazado'}</span>
-              </div>
-              <div className="flex justify-between items-center text-slate-600 text-xs">
-                <span className="flex items-center gap-2"><Droplets size={12} className="text-blue-500" /> Suministro Agua</span>
-                <span className="font-mono">{payment.includeWater !== false ? formatCurrency(payment.waterAmount) : 'Aplazado'}</span>
-              </div>
-            </div>
-
-            {payment.otherExpenses > 0 && (
-              <div className="flex justify-between items-center text-slate-600 text-xs border-t border-slate-50 pt-2">
-                <span>Otros cargos puntuales</span>
-                <span className="font-mono">{formatCurrency(payment.otherExpenses)}</span>
-              </div>
-            )}
-
-            {(payment.manualChargesAmount || 0) > 0 && (
-              <div className="flex justify-between items-center text-rose-600 text-xs border-t border-slate-50 pt-2 font-bold">
-                <span>Cargos acumulados previos</span>
-                <span className="font-mono">+{formatCurrency(payment.manualChargesAmount)}</span>
-              </div>
-            )}
-            
-            <div className="pt-3 mt-3 border-t border-slate-100 flex justify-between items-center text-slate-900 text-xs font-black uppercase tracking-widest">
-              <span>Subtotal mes actual</span>
-              <span className="font-mono text-sm">{formatCurrency(payment.totalToPay)}</span>
-            </div>
-
-            {payment.pendingDebts.length > 0 && (
-              <div className="space-y-4 pt-4">
-                <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest border-b border-rose-100 pb-1">Deuda Anterior Acumulada</h5>
+          <div className="space-y-6">
+            {/* Main Charges List (Current Month) */}
+            <div className="bg-slate-50/30 p-4 rounded-2xl border border-slate-100">
+              <h5 className="text-[10px] font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
+                 Cargos Periodo Actual ({payment.month} {payment.year})
+              </h5>
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center text-slate-600 text-sm">
+                  <span>Alquiler mensual base</span>
+                  <span className="font-mono font-bold text-slate-900">{formatCurrency(payment.rentAmount)}</span>
+                </div>
                 
+                <div className="flex justify-between items-center text-slate-600 text-sm">
+                  <span className="flex items-center gap-2"><Zap size={14} className="text-amber-500" /> Suministro Luz</span>
+                  <span className={cn("font-mono font-bold", payment.includeElectricity === false ? "text-slate-400 italic" : "text-slate-900")}>
+                    {payment.includeElectricity === false ? 'Aplazado' : formatCurrency(payment.electricityAmount)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center text-slate-600 text-sm">
+                  <span className="flex items-center gap-2"><Droplets size={14} className="text-blue-500" /> Suministro Agua</span>
+                  <span className={cn("font-mono font-bold", payment.includeWater === false ? "text-slate-400 italic" : "text-slate-900")}>
+                    {payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount)}
+                  </span>
+                </div>
+
+                {(payment.otherExpenses + (payment.manualChargesAmount || 0)) > 0 && (
+                  <div className="flex justify-between items-center text-slate-600 text-sm border-t border-slate-100 pt-2.5">
+                    <span>Otros cargos y ajustes</span>
+                    <span className="font-mono font-bold text-slate-900">{formatCurrency(payment.otherExpenses + (payment.manualChargesAmount || 0))}</span>
+                  </div>
+                )}
+                
+                <div className="pt-3 mt-3 border-t border-slate-200 flex justify-between items-center text-slate-900 text-xs font-black uppercase tracking-widest">
+                  <span>Total Invoiced (Excl. Aplazados)</span>
+                  <span className="font-mono text-sm bg-slate-100 px-2 py-0.5 rounded">{formatCurrency(payment.totalToPay)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Summary */}
+            <div className="grid grid-cols-2 gap-4 pb-6 border-b border-slate-100">
+              <div className="bg-indigo-50 p-4 rounded-2xl border border-indigo-100/50">
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Entrega / Pago</p>
+                <p className="text-2xl font-black text-indigo-600 font-mono leading-none">{formatCurrency(payment.amountPaid)}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Balance Final</p>
+                <p className={cn("text-lg font-bold font-mono leading-none text-right", payment.netDue > 0 ? "text-rose-500" : "text-emerald-500")}>
+                  {payment.netDue > 0 ? formatCurrency(payment.netDue) : 'LIQUIDADO'}
+                </p>
+              </div>
+            </div>
+
+            {/* Debt Breakdown / Settlement */}
+            <div className="space-y-4">
+              <h5 className="text-[10px] font-black text-rose-500 uppercase tracking-widest border-b border-rose-100 pb-1 flex justify-between items-center">
+                <span>ESTADO DE LIQUIDACIÓN POR MESES</span>
+                {payment.netDue > 0 && <span className="text-[9px] font-normal lowercase italic text-rose-400 font-sans tracking-normal opacity-80">(Incluye cargos actuales no pagados)</span>}
+              </h5>
+              
+              <div className="grid grid-cols-1 gap-3">
                 {(() => {
                   const groupedDebts = payment.pendingDebts.reduce((acc, debt) => {
-                    if (!acc[debt.period]) acc[debt.period] = [];
-                    acc[debt.period].push(debt);
+                    const period = debt.period;
+                    if (!acc[period]) acc[period] = [];
+                    acc[period].push(debt);
                     return acc;
                   }, {} as Record<string, typeof payment.pendingDebts>);
 
-                  // Sort periods chronologically
                   const sortedPeriods = Object.keys(groupedDebts).sort((a, b) => {
                     const [m1, y1] = a.split(' ');
                     const [m2, y2] = b.split(' ');
@@ -120,7 +141,6 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                     return date1.getTime() - date2.getTime();
                   });
 
-                  // Helper for concept priority
                   const getConceptPriority = (concept: string) => {
                     if (concept.includes('Alquiler')) return 1;
                     if (concept.includes('Luz')) return 2;
@@ -129,32 +149,40 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                   };
 
                   return sortedPeriods.map(period => (
-                    <div key={period} className="space-y-1">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase">{period}</p>
-                      {groupedDebts[period]
-                        .sort((a, b) => getConceptPriority(a.concept) - getConceptPriority(b.concept))
-                        .map((debt, idx) => (
-                        <div key={idx} className="flex justify-between items-center text-slate-700 text-[11px]">
-                          <span>{debt.concept}</span>
-                          <span className="font-mono">{formatCurrency(debt.amount)}</span>
-                        </div>
-                      ))}
+                    <div key={period} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">{period}</p>
+                        {groupedDebts[period].every(d => d.isPaid) ? (
+                          <span className="text-[9px] px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full font-black uppercase tracking-tighter border border-emerald-100">Pagado</span>
+                        ) : (
+                          <span className="text-[9px] px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full font-black uppercase tracking-tighter border border-rose-100">Pendiente</span>
+                        )}
+                      </div>
+                      <div className="space-y-1.5">
+                        {groupedDebts[period]
+                          .sort((a, b) => getConceptPriority(a.concept) - getConceptPriority(b.concept))
+                          .map((debt, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-[11px]">
+                              <span className={cn(debt.isPaid ? "text-slate-400" : "text-slate-700 font-medium")}>
+                                {debt.concept}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className={cn("font-mono", debt.isPaid ? "text-emerald-500 font-medium" : "text-rose-600 font-bold")}>
+                                  {debt.isPaid ? 'PAGADO' : formatCurrency(debt.amount)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
                     </div>
                   ));
                 })()}
               </div>
-            )}
+            </div>
 
-            {payment.previousBalance > 0 && (
-              <div className="flex justify-between items-center text-emerald-600 text-[11px] pt-3 italic">
-                <span>Crédito a favor (Saldo anterior)</span>
-                <span className="font-mono">-{formatCurrency(payment.previousBalance)}</span>
-              </div>
-            )}
-
-            <div className="p-4 bg-slate-100 rounded-2xl flex justify-between items-center text-slate-900 mt-8">
-              <span className="font-black text-[10px] uppercase tracking-widest">Final a Liquidar</span>
-              <span className="text-xl font-black font-mono">
+            <div className="p-5 bg-slate-900 rounded-3xl flex justify-between items-center text-white mt-10 shadow-xl shadow-slate-200">
+              <span className="font-black text-[10px] uppercase tracking-widest text-slate-400">Total Final Pendiente</span>
+              <span className="text-2xl font-black font-mono">
                 {formatCurrency(Math.max(0, payment.netDue))}
               </span>
             </div>

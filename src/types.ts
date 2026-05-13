@@ -91,6 +91,7 @@ export interface DebtDetail {
   amount: number;
   month: string;
   year: number;
+  isPaid?: boolean;
 }
 
 export interface CalculatedPayment extends Payment {
