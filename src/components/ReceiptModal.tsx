@@ -27,17 +27,18 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
     const message = `*LIQUIDACIÓN ALQUILER*\n` +
       `📅 *Periodo:* ${payment.month} ${payment.year}\n` +
       `👤 *Inquilino:* ${tenant?.name || 'Inquilino'}\n\n` +
-      `*DETALLE DEL MES:*\n` +
+      `*DETALLE DE CARGOS:*\n` +
       `🏠 Alquiler: ${formatCurrency(payment.rentAmount)}\n` +
       `⚡ Luz: ${payment.electricityAmount === 0 && payment.includeElectricity !== false ? 'Sin factura (Pendiente)' : (payment.includeElectricity === false ? 'Aplazado' : formatCurrency(payment.electricityAmount))}\n` +
       `💧 Agua: ${payment.waterAmount === 0 && payment.includeWater !== false ? 'Sin factura (Pendiente)' : (payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount))}\n` +
       (payment.otherExpenses > 0 ? `➕ Otros: ${formatCurrency(payment.otherExpenses)}\n` : '') +
-      `💰 *Total Mes:* ${formatCurrency(payment.totalToPay)}\n\n` +
+      `💰 *Subtotal Mes:* ${formatCurrency(payment.totalToPay)}\n\n` +
+      (pendingText ? `*DEUDAS PENDIENTES / APLAZADOS:*\n${pendingText}\n\n` : '') +
       `*ESTADO DE LIQUIDACIÓN:*\n` +
-      `📑 Saldo Total Exigible: ${formatCurrency(payment.totalExigible || (payment.netDue + payment.amountPaid + payment.previousBalance))}\n` +
-      (payment.previousBalance > 0 ? `✨ Remanente a su favor: -${formatCurrency(payment.previousBalance)}\n` : '') +
-      `📥 Entrega registrada: -${formatCurrency(payment.amountPaid)}\n` +
-      `❗ *BALANCE FINAL: ${payment.netDue > 0 ? formatCurrency(payment.netDue) : (payment.currentSurplus > 0 ? '-' + formatCurrency(payment.currentSurplus) + ' (A su favor)' : '0,00 €')}*`;
+      `📑 Deuda Total Acumulada: ${formatCurrency(payment.totalExigible || (payment.netDue + payment.amountPaid + payment.previousBalance))}\n` +
+      (payment.previousBalance > 0 ? `✨ Saldo a favor aplicado: -${formatCurrency(payment.previousBalance)}\n` : '') +
+      `📥 Entrega recibida: -${formatCurrency(payment.amountPaid)}\n` +
+      `❗ *${payment.netDue > 0 ? 'BALANCE PENDIENTE' : 'SALDO A FAVOR'}: ${payment.netDue > 0 ? formatCurrency(payment.netDue) : formatCurrency(payment.currentSurplus)}*`;
 
     navigator.clipboard.writeText(message);
     setCopied(true);
@@ -145,20 +146,25 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                 </div>
               </div>
               
-              <div className="bg-slate-900 p-3 rounded-2xl shadow-lg shadow-slate-200 flex flex-col justify-between">
+              <div className={cn(
+                "p-3 rounded-2xl shadow-lg flex flex-col justify-between transition-all",
+                payment.netDue > 0 ? "bg-slate-900 shadow-slate-200" : "bg-emerald-700 shadow-emerald-100"
+              )}>
                 <div>
                   <div className="flex justify-between items-start">
-                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Entrega / Pago</p>
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Entrega Actual</p>
                     {payment.previousBalance > 0 && (
-                      <span className="text-[8px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-bold">+{formatCurrency(payment.previousBalance)} Sobrante</span>
+                      <span className="text-[8px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">✨ + Remanente</span>
                     )}
                   </div>
                   <p className="text-xl font-black text-white font-mono">{formatCurrency(payment.amountPaid)}</p>
                 </div>
                 <div className="pt-2 border-t border-white/10">
-                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Balance Pendiente</p>
-                  <p className={cn("text-base font-black font-mono", payment.netDue > 0 ? "text-rose-400" : "text-emerald-400")}>
-                    {payment.netDue > 0 ? formatCurrency(payment.netDue) : '0,00 €'}
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-0.5">
+                    {payment.netDue > 0 ? 'Balance Final' : 'Nuevo Saldo a Favor'}
+                  </p>
+                  <p className={cn("text-base font-black font-mono", payment.netDue > 0 ? "text-rose-400" : "text-emerald-300")}>
+                    {payment.netDue > 0 ? formatCurrency(payment.netDue) : formatCurrency(payment.currentSurplus)}
                   </p>
                 </div>
               </div>
