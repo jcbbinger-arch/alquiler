@@ -25,33 +25,50 @@ import { Calendar, TrendingUp, BarChart3 } from 'lucide-react';
 
 interface YearlyStatsProps {
   payments: Payment[];
+  initialYear?: number;
+  initialView?: 'yearly' | 'monthly';
 }
 
-export function YearlyStats({ payments }: YearlyStatsProps) {
-  const [viewType, setViewType] = useState<'yearly' | 'monthly'>('yearly');
+export function YearlyStats({ payments, initialYear, initialView }: YearlyStatsProps) {
+  const [viewType, setViewType] = useState<'yearly' | 'monthly'>(initialView || 'yearly');
   const years = useMemo(() => [...new Set(payments.map(p => p.year))].sort((a, b) => b - a), [payments]);
-  const [selectedYear, setSelectedYear] = useState<number>(years[0] || new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState<number>(initialYear || years[0] || new Date().getFullYear());
+
+  // Update internal state if props change (optional, but good for navigation)
+  React.useEffect(() => {
+    if (initialYear) setSelectedYear(initialYear);
+    if (initialView) setViewType(initialView);
+  }, [initialYear, initialView]);
 
   const yearlyData = useMemo(() => {
     const sortedYears = [...years].sort((a, b) => a - b);
-    let totalLuz = 0;
-    let totalAgua = 0;
+    let cumulativeAvgLuz = 0;
+    let cumulativeAvgAgua = 0;
     
     return sortedYears.map((year, index) => {
       const yearPayments = payments.filter(p => p.year === year);
-      const yearLuz = yearPayments.reduce((acc, p) => acc + p.electricityAmount, 0);
-      const yearAgua = yearPayments.reduce((acc, p) => acc + p.waterAmount, 0);
+      const monthsWithData = new Set(yearPayments.map(p => p.month)).size || 1;
       
-      totalLuz += yearLuz;
-      totalAgua += yearAgua;
+      const totalLuz = yearPayments.reduce((acc, p) => acc + p.electricityAmount, 0);
+      const totalAgua = yearPayments.reduce((acc, p) => acc + p.waterAmount, 0);
+      
+      const monthlyAvgLuz = totalLuz / monthsWithData;
+      const monthlyAvgAgua = totalAgua / monthsWithData;
+
+      cumulativeAvgLuz += monthlyAvgLuz;
+      cumulativeAvgAgua += monthlyAvgAgua;
       const count = index + 1;
 
       return {
         name: year.toString(),
-        Luz: yearLuz,
-        Agua: yearAgua,
-        avgLuz: totalLuz / count,
-        avgAgua: totalAgua / count
+        year: year,
+        Luz: monthlyAvgLuz,
+        Agua: monthlyAvgAgua,
+        avgLuz: cumulativeAvgLuz / count,
+        avgAgua: cumulativeAvgAgua / count,
+        totalTotalLuz: totalLuz,
+        totalTotalAgua: totalAgua,
+        monthsCount: monthsWithData
       };
     });
   }, [payments, years]);
@@ -105,7 +122,9 @@ export function YearlyStats({ payments }: YearlyStatsProps) {
               <TrendingUp size={20} className="text-indigo-600" />
               Estadísticas de Suministros
             </h3>
-            <p className="text-xs text-slate-500 mt-1">Comparativa de gastos y promedios históricos</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {viewType === 'yearly' ? 'Promedio mensual por año (Ajustado por meses registrados)' : 'Gasto por mes del año seleccionado'}
+            </p>
           </div>
 
           <div className="flex bg-slate-100 p-1 rounded-xl items-center">
@@ -167,7 +186,17 @@ export function YearlyStats({ payments }: YearlyStatsProps) {
                   boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
                   padding: '12px 16px'
                 }}
-                formatter={(value: number) => [formatCurrency(value), '']}
+                formatter={(value: number, name: string, props: any) => {
+                  const label = viewType === 'yearly' ? `Media Mensual ${name}` : name;
+                  return [formatCurrency(value), label];
+                }}
+                labelFormatter={(label) => {
+                  if (viewType === 'yearly') {
+                    const data = yearlyData.find(d => d.name === label);
+                    return `Año ${label} (${data?.monthsCount} meses)`;
+                  }
+                  return label;
+                }}
                 itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
               />
               <Legend 
@@ -204,8 +233,8 @@ export function YearlyStats({ payments }: YearlyStatsProps) {
                 }} 
               />
 
-              <Bar dataKey="Luz" fill="#F59E0B" radius={[6, 6, 0, 0]} barSize={24} />
-              <Bar dataKey="Agua" fill="#3B82F6" radius={[6, 6, 0, 0]} barSize={24} />
+              <Bar dataKey="Luz" name={viewType === 'yearly' ? 'Luz (Media)' : 'Luz'} fill="#F59E0B" radius={[6, 6, 0, 0]} barSize={24} />
+              <Bar dataKey="Agua" name={viewType === 'yearly' ? 'Agua (Media)' : 'Agua'} fill="#3B82F6" radius={[6, 6, 0, 0]} barSize={24} />
             </BarChart>
           </ResponsiveContainer>
         </div>

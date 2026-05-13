@@ -89,6 +89,7 @@ export interface DebtDetail {
   concept: string;
   period: string;
   amount: number;
+  originalAmount?: number;
   month: string;
   year: number;
   isPaid?: boolean;
@@ -100,4 +101,5 @@ export interface CalculatedPayment extends Payment {
   netDue: number; // totalToPay - previousBalance
   currentSurplus: number; // amountPaid - netDue (if positive)
   pendingDebts: DebtDetail[]; // List of unpaid items from previous months
+  totalExigible?: number; // Total due before applying previous balance and current payment
 }

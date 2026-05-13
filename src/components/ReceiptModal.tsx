@@ -33,10 +33,11 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
       `💧 Agua: ${payment.waterAmount === 0 && payment.includeWater !== false ? 'Sin factura (Pendiente)' : (payment.includeWater === false ? 'Aplazado' : formatCurrency(payment.waterAmount))}\n` +
       (payment.otherExpenses > 0 ? `➕ Otros: ${formatCurrency(payment.otherExpenses)}\n` : '') +
       `💰 *Total Mes:* ${formatCurrency(payment.totalToPay)}\n\n` +
-      (payment.previousBalance > 0 ? `✨ *Sobrante anterior:* ${formatCurrency(payment.previousBalance)} (Aplicado)\n` : '') +
-      (pendingText ? `*DEUDAS PENDIENTES:*\n${pendingText}\n\n` : '') +
-      `📥 *Entrega registrada:* ${formatCurrency(payment.amountPaid)}\n` +
-      `❗ *SALDO FINAL:* ${formatCurrency(payment.netDue)}`;
+      `*ESTADO DE LIQUIDACIÓN:*\n` +
+      `📑 Saldo Total Exigible: ${formatCurrency(payment.totalExigible || payment.netDue + payment.amountPaid + payment.previousBalance)}\n` +
+      (payment.previousBalance > 0 ? `✨ Remanente a su favor: -${formatCurrency(payment.previousBalance)}\n` : '') +
+      `📥 Entrega registrada: -${formatCurrency(payment.amountPaid)}\n` +
+      `❗ *BALANCE FINAL: ${formatCurrency(payment.netDue)}*`;
 
     navigator.clipboard.writeText(message);
     setCopied(true);
@@ -210,7 +211,7 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
                             .map((debt, idx) => (
                               <div key={idx} className="flex justify-between items-center text-[10px]">
                                 <span className="text-slate-600 truncate max-w-[80px]">{debt.concept}</span>
-                                <span className="font-mono text-rose-500 font-bold">{formatCurrency(debt.amount)}</span>
+                                <span className="font-mono text-rose-500 font-bold">{formatCurrency(debt.originalAmount ?? debt.amount)}</span>
                               </div>
                             ))}
                         </div>
@@ -221,11 +222,32 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
               </div>
             </div>
 
-            <div className="p-4 bg-slate-100 rounded-2xl flex justify-between items-center text-slate-900 border border-slate-200">
-              <span className="font-black text-[10px] uppercase tracking-widest text-slate-500">Saldo Total Exigible</span>
-              <span className="text-lg font-black font-mono">
-                {formatCurrency(Math.max(0, payment.netDue))}
-              </span>
+            <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+              <div className="p-4 space-y-2">
+                <div className="flex justify-between items-center text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <span>Saldo Total Exigible</span>
+                  <span className="font-mono text-slate-700">{formatCurrency(payment.totalExigible || payment.netDue + payment.amountPaid + payment.previousBalance)}</span>
+                </div>
+                
+                {payment.previousBalance > 0 && (
+                  <div className="flex justify-between items-center text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                    <span className="flex items-center gap-1">✨ Remanente a su favor</span>
+                    <span className="font-mono text-emerald-500">-{formatCurrency(payment.previousBalance)}</span>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-center text-indigo-600 text-[10px] font-black uppercase tracking-widest">
+                  <span className="flex items-center gap-1">📥 Entrega Actual</span>
+                  <span className="font-mono">-{formatCurrency(payment.amountPaid)}</span>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-slate-900 flex justify-between items-center text-white border-t border-white/5">
+                <span className="font-black text-[11px] uppercase tracking-widest">Balance Pendiente Final</span>
+                <span className={cn("text-xl font-black font-mono", payment.netDue > 0 ? "text-rose-400" : "text-emerald-400")}>
+                  {payment.netDue > 0 ? formatCurrency(payment.netDue) : '0,00 €'}
+                </span>
+              </div>
             </div>
           </div>
 

@@ -116,6 +116,7 @@ export default function App() {
   const [showChargeModal, setShowChargeModal] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<CalculatedPayment | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | 'all'>('all');
+  const [statsNavContext, setStatsNavContext] = useState<{ year: number, view: 'yearly' | 'monthly' } | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -252,6 +253,19 @@ export default function App() {
         return getPriority(a.concept) - getPriority(b.concept);
       });
 
+      // Calculate total exigible BEFORE applying anything
+      const totalExigible = payableQueue.reduce((sum, d) => sum + d.amount, 0) + 
+                             currentPostponed.reduce((sum, d) => sum + d.amount, 0);
+
+      // Save for display BEFORE reduction
+      const displayPendingBeforeReduction = [
+        ...payableQueue,
+        ...currentPostponed
+      ].map(d => ({
+        ...d,
+        originalAmount: d.amount
+      }));
+
       // 3. Apply payment (current month payment + carried surplus)
       let remainingPayment = p.amountPaid + carriedSurplus;
       for (let item of payableQueue) {
@@ -270,19 +284,19 @@ export default function App() {
         ...currentPostponed
       ];
 
-      // 5. Build pendingDebts for display (including what was paid in this batch for the receipt)
-      // Only include items that are relevant to this payment or still pending
-      const displayPending = [
-        ...payableQueue,
-        ...currentPostponed
-      ].map(d => ({
-        concept: d.concept,
-        period: d.period,
-        amount: d.amount,
-        month: d.month,
-        year: d.year,
-        isPaid: d.amount <= 0.01
-      }));
+      // 5. Build pendingDebts for display
+      const displayPending = displayPendingBeforeReduction.map(d => {
+        const currentItem = [...payableQueue, ...currentPostponed].find(c => c.concept === d.concept && c.period === d.period);
+        return {
+          concept: d.concept,
+          period: d.period,
+          amount: currentItem ? currentItem.amount : 0,
+          originalAmount: d.originalAmount,
+          month: d.month,
+          year: d.year,
+          isPaid: (currentItem ? currentItem.amount : 0) <= 0.01
+        };
+      });
 
       // 6. Calculate total invoiced for this month
       const totalInvoicedThisMonth = p.rentAmount + 
@@ -296,7 +310,8 @@ export default function App() {
         previousBalance: surplusBeingApplied, 
         netDue: activeUnpaidItems.reduce((sum, d) => sum + d.amount, 0),
         currentSurplus: carriedSurplus,
-        pendingDebts: displayPending
+        pendingDebts: displayPending as any,
+        totalExigible: totalExigible
       });
 
     }
@@ -715,7 +730,11 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
-                <YearlyStats payments={payments} />
+                <YearlyStats 
+                  payments={payments} 
+                  initialYear={statsNavContext?.year}
+                  initialView={statsNavContext?.view}
+                />
               </motion.div>
             ) : activeTab === 'tenant' ? (
               <motion.div
@@ -734,6 +753,10 @@ export default function App() {
                   onEditTenant={(t) => {
                     setEditingTenant(t);
                     setShowTenantModal(true);
+                  }}
+                  onViewStats={(year) => {
+                    setStatsNavContext({ year, view: 'monthly' });
+                    setActiveTab('stats');
                   }}
                 />
               </motion.div>

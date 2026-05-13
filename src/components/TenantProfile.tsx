@@ -13,9 +13,10 @@ interface TenantProfileProps {
   payments: CalculatedPayment[];
   onAddTenant: () => void;
   onEditTenant: (tenant: Tenant) => void;
+  onViewStats?: (year: number) => void;
 }
 
-export function TenantProfile({ tenants, payments, onAddTenant, onEditTenant }: TenantProfileProps) {
+export function TenantProfile({ tenants, payments, onAddTenant, onEditTenant, onViewStats }: TenantProfileProps) {
   const [addingChargeTo, setAddingChargeTo] = React.useState<string | null>(null);
   const [newCharge, setNewCharge] = React.useState({ concept: '', amount: 0, category: 'extra' as const });
 
@@ -215,7 +216,11 @@ export function TenantProfile({ tenants, payments, onAddTenant, onEditTenant }: 
                         const yearPayments = tenantPayments.filter(p => p.year === year);
                         const yearlyPaid = yearPayments.reduce((sum, p) => sum + p.amountPaid, 0);
                         return (
-                          <div key={year} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group/year hover:border-indigo-100 transition-all">
+                          <div 
+                            key={year} 
+                            onClick={() => onViewStats?.(year)}
+                            className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group/year hover:border-indigo-100 transition-all cursor-pointer hover:bg-slate-100"
+                          >
                             <div>
                               <p className="text-sm font-black text-slate-900">AÑO {year}</p>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{yearPayments.length} meses registrados</p>
