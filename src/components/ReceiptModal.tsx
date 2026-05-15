@@ -20,23 +20,19 @@ export function ReceiptModal({ payment, tenant, onClose }: ReceiptModalProps) {
 
   const copyToWhatsApp = () => {
     const pendingText = payment.pendingDebts
-      .filter(d => d.amount > 0.01)
-      .map(d => `• ${d.concept} (${d.period}): ${formatCurrency(d.amount)}`)
+      .filter(d => !d.isPaid)
+      .map(d => {
+        const displayAmount = d.amount < 0.01 ? "pospuesta" : `${formatCurrency(d.amount)}`;
+        return `* ${d.concept} (${d.period}): ${displayAmount}`;
+      })
       .join('\n');
 
-    const message = `*LIQUIDACIÓN ALQUILER ACCUMULATIVA*\n` +
-      `📅 *Periodo:* ${payment.month} ${payment.year}\n` +
-      `👤 *Inquilino:* ${tenant?.name || 'Inquilino'}\n\n` +
-      `*1. ESTADO DE CUENTA (FLUJO):*\n` +
-      `🏠 Cargos del Mes: ${formatCurrency(payment.totalToPay)}\n` +
-      (payment.previousDebt > 0 ? `⚠️ Deudas Atrasadas: ${formatCurrency(payment.previousDebt)}\n` : '') +
-      (payment.previousBalance > 0 ? `✨ Saldo a Favor Anterior: -${formatCurrency(payment.previousBalance)}\n` : '') +
+    const message = `📅 Periodo: ${payment.month.toLowerCase()} ${payment.year}\n\n` +
+      (payment.previousBalance > 0 ? `✨ Saldo a Favor Anterior: -${formatCurrency(payment.previousBalance)} €\n` : '') +
       `--------------------------\n` +
-      `📑 *TOTAL EXIGIBLE: ${formatCurrency(payment.totalExigible || 0)}*\n` +
-      `📥 *Entrega Registrada: -${formatCurrency(payment.amountPaid)}*\n` +
-      `--------------------------\n` +
-      `❗ *${payment.netDue > 0 ? 'BALANCE PENDIENTE' : 'SALDO A FAVOR'}: ${payment.netDue > 0 ? formatCurrency(payment.netDue) : formatCurrency(payment.currentSurplus)}*\n\n` +
-      (pendingText ? `*DETALLE DE PENDIENTES:*\n${pendingText}\n` : '');
+      `📑 TOTAL: ${formatCurrency(payment.totalExigible || 0)} €\n` +
+      `--------------------------\n\n` +
+      (pendingText ? `DETALLE DE PENDIENTES:\n${pendingText}\n` : '');
 
     navigator.clipboard.writeText(message);
     setCopied(true);
