@@ -25,6 +25,7 @@ import {
   ArrowRight,
   LogIn
 } from 'lucide-react';
+import { BackupController } from './components/BackupController';
 import { 
   BarChart, 
   Bar, 
@@ -532,6 +533,7 @@ export default function App() {
           </p>
           <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold">Total acumulado cobrado</p>
         </div>
+        {user && <BackupController payments={payments} tenants={tenants} ownerId={user.uid} onRestore={() => window.location.reload()} />}
       </aside>
 
       {/* Main Content */}
