@@ -133,6 +133,13 @@ export function TenantProfile({ tenants, payments, onAddTenant, onEditTenant, on
                       </p>
                     </div>
                     <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 mb-1">Alquiler Mensual</p>
+                      <p className="font-mono font-bold flex items-center gap-2">
+                        <DollarSign size={14} />
+                        {formatCurrency(tenant.rentAmount)}
+                      </p>
+                    </div>
+                    <div className="bg-white/10 p-4 rounded-2xl backdrop-blur-sm">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 mb-1">Fianza</p>
                       <p className="font-mono font-bold flex items-center gap-2">
                         <ShieldCheck size={14} />

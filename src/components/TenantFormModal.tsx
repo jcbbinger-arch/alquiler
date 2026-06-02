@@ -16,6 +16,7 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
       const t = tenant as any;
       return {
         ...tenant,
+        rentAmount: tenant.rentAmount || 250,
         emergencyContacts: tenant.emergencyContacts || (t.emergencyContact ? [t.emergencyContact] : [{ name: '', relationship: '', phone: '' }]),
         notes: tenant.notes || [],
         manualCharges: tenant.manualCharges || [],
