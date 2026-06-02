@@ -33,6 +33,7 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
       depositMonths: 1,
       depositInitialDate: new Date().toISOString().split('T')[0],
       additionalDeposits: [],
+      rentAmount: 300,
       leaseStartDate: new Date().toISOString().split('T')[0],
       leaseEndDate: '',
       emergencyContacts: [{ name: '', relationship: '', phone: '' }],
@@ -219,6 +220,20 @@ export function TenantFormModal({ tenant, onClose, onSave }: TenantFormModalProp
                 <span className="w-8 h-px bg-emerald-600" />
                 Condiciones de Alquiler
               </h4>
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Alquiler Mensual Base (€)</label>
+                <input 
+                  type="text" 
+                  inputMode="decimal"
+                  name="rentAmount"
+                  value={formData.rentAmount}
+                  onChange={handleChange}
+                  onKeyDown={handleNumericKeyDown}
+                  placeholder="Ej. 300"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-black text-lg text-slate-700"
+                  required
+                />
+              </div>
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">F. Inicio Contrato</label>
